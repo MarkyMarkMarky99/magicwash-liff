@@ -5,7 +5,10 @@ import RegisterCustomer from './pages/RegisterCustomer';
 import BookPickup from './pages/BookPickup';
 
 const DEV_PREVIEWS = import.meta.env.DEV
-  ? { 'register-success': () => import('./pages/dev/RegisterSuccessPreview') }
+  ? {
+      'register-success': () => import('./pages/dev/RegisterSuccessPreview'),
+      'booking-success':  () => import('./pages/dev/BookingSuccessPreview'),
+    }
   : {};
 
 /**

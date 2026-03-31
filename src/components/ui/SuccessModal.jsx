@@ -14,11 +14,11 @@ export default function SuccessModal({ title, children, action, onClose, headerI
       )}
       <div className="bg-surface-container-lowest rounded-2xl p-5 w-full max-w-[320px] flex flex-col items-center text-center shadow-2xl min-h-[360px]">
         {headerInline ? (
-          <div className="flex items-center gap-3 pb-4 mb-4 w-full border-b border-outline-variant/30">
-            <div className="w-14 h-14 flex-shrink-0 bg-primary/10 rounded-full flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-[36px]">check_circle</span>
+          <div className="flex items-center gap-2.5 pb-3 mb-3 w-full border-b border-outline-variant/30">
+            <div className="w-10 h-10 flex-shrink-0 bg-primary/10 rounded-full flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-[24px]">check_circle</span>
             </div>
-            <h3 className="text-2xl font-headline font-bold text-primary text-left leading-tight">{title}</h3>
+            <h3 className="text-lg font-headline font-bold text-primary leading-snug">{title}</h3>
           </div>
         ) : (
           <>
@@ -32,7 +32,7 @@ export default function SuccessModal({ title, children, action, onClose, headerI
           <div className="w-full mb-2">{children}</div>
         )}
         {action && (
-          <div className="w-full mt-auto">{action}</div>
+          <div className="w-full mt-auto pt-3 border-t border-outline-variant/30">{action}</div>
         )}
       </div>
     </div>,

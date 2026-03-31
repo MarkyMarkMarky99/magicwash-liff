@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createAppointment } from '../api/customerApi';
 import PageLayout from '../components/layout/PageLayout';
-import SuccessModal from '../components/ui/SuccessModal';
+import BookingSuccessModal from '../components/booking/BookingSuccessModal';
 
 const DAY_ABBREV = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const TIME_SLOTS = ['10:00-12:00', '13:00-15:00', '15:00-17:00', '18:00-20:00'];
@@ -117,22 +117,14 @@ export default function BookPickup({ userData }) {
   return (
     <>
       {success && (
-        <SuccessModal title={<>Booking<br />Confirmed!</>} onClose={() => setSuccess(false)}>
-          <div className="w-full bg-surface-container rounded-2xl p-4 flex flex-col gap-2 border border-outline-variant/30 text-sm font-body">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-[16px]">person</span>
-              <span className="text-on-surface font-semibold">{displayName}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-[16px]">calendar_today</span>
-              <span className="text-on-surface">{selectedDate}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-[16px]">schedule</span>
-              <span className="text-on-surface">{selectedTime}</span>
-            </div>
-          </div>
-        </SuccessModal>
+        <BookingSuccessModal
+          name={displayName}
+          phone={userData?.phone}
+          address={displayAddress}
+          date={selectedDate}
+          timeSlot={selectedTime}
+          onClose={() => setSuccess(false)}
+        />
       )}
 
       <PageLayout title="Book Pickup" footer={footer} scrollable>
