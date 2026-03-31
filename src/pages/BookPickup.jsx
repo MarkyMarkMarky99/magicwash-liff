@@ -115,8 +115,7 @@ export default function BookPickup({ userData }) {
   );
 
   return (
-    <PageLayout title="Book Pickup" footer={footer} scrollable>
-
+    <>
       {success && (
         <SuccessModal title={<>Booking<br />Confirmed!</>}>
           <div className="w-full bg-surface-container rounded-2xl p-4 flex flex-col gap-2 border border-outline-variant/30 text-sm font-body">
@@ -136,7 +135,8 @@ export default function BookPickup({ userData }) {
         </SuccessModal>
       )}
 
-      <div className="px-6 py-5 space-y-5 pb-6">
+      <PageLayout title="Book Pickup" footer={footer} scrollable>
+        <div className="px-6 py-5 space-y-5 pb-6">
 
         {/* Customer summary card */}
         <section aria-label="Customer">
@@ -239,8 +239,8 @@ export default function BookPickup({ userData }) {
           </div>
         </section>
 
-      </div>
-
-    </PageLayout>
+        </div>
+      </PageLayout>
+    </>
   );
 }

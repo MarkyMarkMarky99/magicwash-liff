@@ -92,8 +92,7 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   );
 
   return (
-    <PageLayout title="New Customer" footer={footer}>
-
+    <>
       {showSuccessModal && (
         <SuccessModal
           title={<>Registration<br />Successful!</>}
@@ -117,7 +116,8 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
         </SuccessModal>
       )}
 
-      <div className="px-5 pt-6 pb-4">
+      <PageLayout title="New Customer" footer={footer}>
+        <div className="px-5 pt-6 pb-4">
 
         {apiError && (
           <div className="mb-4 p-3 bg-error/10 border border-error/30 rounded-xl flex items-start gap-2">
@@ -203,8 +203,8 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
             </div>
           </div>
         </form>
-      </div>
-
-    </PageLayout>
+        </div>
+      </PageLayout>
+    </>
   );
 }
