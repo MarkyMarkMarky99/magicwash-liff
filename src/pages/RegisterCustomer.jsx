@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { registerCustomer, linkLineId } from '../api/customerApi';
 import PageLayout from '../components/layout/PageLayout';
+import SuccessModal from '../components/ui/SuccessModal';
 
 export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   const [formData, setFormData] = useState(() => {
@@ -93,30 +94,27 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   return (
     <PageLayout title="New Customer" footer={footer}>
 
-      {/* Success Modal */}
       {showSuccessModal && (
-        <div className="absolute inset-0 bg-black/40 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest rounded-[2rem] p-8 w-full max-w-[320px] flex flex-col items-center text-center shadow-2xl">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-5">
-              <span className="material-symbols-outlined text-primary text-[48px]">check_circle</span>
-            </div>
-            <h3 className="text-2xl font-headline font-bold text-primary mb-2">Registration<br />Successful!</h3>
-            <p className="text-on-surface-variant mb-6 text-sm font-body">Your account has been created.</p>
-            <div className="w-full bg-surface-container rounded-2xl p-4 flex flex-col items-center border border-outline-variant/30 mb-2">
-              <span className="text-on-surface-variant text-xs mb-1 uppercase tracking-wider font-semibold font-label">Redirecting in</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-headline font-bold text-primary">{countdown}</span>
-                <span className="text-on-surface-variant font-medium">s</span>
-              </div>
-            </div>
+        <SuccessModal
+          title={<>Registration<br />Successful!</>}
+          action={
             <button
               onClick={() => onRegisterSuccess(registeredData || formData)}
-              className="mt-4 w-full text-on-surface-variant font-semibold py-3 rounded-xl hover:bg-surface-container transition-colors text-sm font-body"
+              className="w-full text-on-surface-variant font-semibold py-3 rounded-xl hover:bg-surface-container transition-colors text-sm font-body"
             >
               Skip &amp; Continue
             </button>
+          }
+        >
+          <p className="text-on-surface-variant text-sm font-body mb-4">Your account has been created.</p>
+          <div className="w-full bg-surface-container rounded-2xl p-4 flex flex-col items-center border border-outline-variant/30">
+            <span className="text-on-surface-variant text-xs mb-1 uppercase tracking-wider font-semibold font-label">Redirecting in</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-headline font-bold text-primary">{countdown}</span>
+              <span className="text-on-surface-variant font-medium">s</span>
+            </div>
           </div>
-        </div>
+        </SuccessModal>
       )}
 
       <div className="px-5 pt-6 pb-4">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createAppointment } from '../api/customerApi';
 import PageLayout from '../components/layout/PageLayout';
+import SuccessModal from '../components/ui/SuccessModal';
 
 const DAY_ABBREV = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const TIME_SLOTS = ['10:00-12:00', '13:00-15:00', '15:00-17:00', '18:00-20:00'];
@@ -81,28 +82,6 @@ export default function BookPickup({ userData }) {
     }
   };
 
-  if (success) {
-    return (
-      <PageLayout title="Book Pickup">
-        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5 h-full">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary text-[48px]">check_circle</span>
-          </div>
-          <div className="space-y-1">
-            <h2 className="font-headline font-bold text-xl text-primary">Booking Confirmed</h2>
-            <p className="font-body text-sm text-on-surface-variant">
-              Pickup for{' '}
-              <span className="font-semibold text-on-surface">{displayName}</span>
-              {' '}has been scheduled on{' '}
-              <span className="font-semibold text-on-surface">{selectedDate}</span>
-              {' '}at <span className="font-semibold text-on-surface">{selectedTime}</span>.
-            </p>
-          </div>
-        </div>
-      </PageLayout>
-    );
-  }
-
   const footer = (
     <>
       {bookingError && (
@@ -137,6 +116,25 @@ export default function BookPickup({ userData }) {
 
   return (
     <PageLayout title="Book Pickup" footer={footer} scrollable>
+
+      {success && (
+        <SuccessModal title={<>Booking<br />Confirmed!</>}>
+          <div className="w-full bg-surface-container rounded-2xl p-4 flex flex-col gap-2 border border-outline-variant/30 text-sm font-body">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[16px]">person</span>
+              <span className="text-on-surface font-semibold">{displayName}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[16px]">calendar_today</span>
+              <span className="text-on-surface">{selectedDate}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[16px]">schedule</span>
+              <span className="text-on-surface">{selectedTime}</span>
+            </div>
+          </div>
+        </SuccessModal>
+      )}
 
       <div className="px-6 py-5 space-y-5 pb-6">
 
