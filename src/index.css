@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Material Design 3 Color System ── */
+  --color-primary: #004f45;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #00695c;
+  --color-on-primary-container: #94e5d5;
+  --color-secondary: #006b5f;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #8df5e4;
+  --color-on-secondary-container: #007165;
+  --color-background: #f8fafa;
+  --color-on-background: #191c1d;
+  --color-surface: #f8fafa;
+  --color-on-surface: #191c1d;
+  --color-surface-variant: #e1e3e3;
+  --color-on-surface-variant: #3e4946;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4f4;
+  --color-surface-container: #eceeee;
+  --color-surface-container-high: #e6e8e8;
+  --color-surface-container-highest: #e1e3e3;
+  --color-outline: #6e7976;
+  --color-outline-variant: #bec9c5;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* ── Typography ── */
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+}
+
+/* ── Base Layout ── */
+html, body {
+  height: 100dvh;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ── Material Symbols ── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.fill-icon {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Override Google Fonts unlayered font-size: 24px */
+.material-symbols-outlined.text-\[14px\] { font-size: 14px; }
+.material-symbols-outlined.text-\[16px\] { font-size: 16px; }
+.material-symbols-outlined.text-\[18px\] { font-size: 18px; }
+.material-symbols-outlined.text-\[20px\] { font-size: 20px; }
+.material-symbols-outlined.text-\[22px\] { font-size: 22px; }
+.material-symbols-outlined.text-\[28px\] { font-size: 28px; }
+.material-symbols-outlined.text-\[48px\] { font-size: 48px; }
+
+/* ── Scrollbar Hide ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
