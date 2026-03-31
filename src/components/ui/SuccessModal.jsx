@@ -1,6 +1,6 @@
 export default function SuccessModal({ title, children, action }) {
   return (
-    <div className="absolute inset-0 bg-black/40 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
       <div className="bg-surface-container-lowest rounded-[2rem] p-8 w-full max-w-[320px] flex flex-col items-center text-center shadow-2xl">
         <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-5">
           <span className="material-symbols-outlined text-primary text-[48px]">check_circle</span>
