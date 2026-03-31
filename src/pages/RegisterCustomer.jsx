@@ -57,13 +57,16 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
 
 const inputClass = `w-full bg-surface-container border border-outline-variant/30 rounded-xl py-2.5 pr-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-on-surface-variant/60 text-on-surface font-body text-sm transition-colors disabled:opacity-60`;
 
+  const isValidPhone = /^0\d{9}$/.test(formData.phone.trim());
+  const canSubmit = formData.firstName.trim() && formData.email.trim() && isValidPhone && formData.address.trim();
+
   const footer = (
     <button
-      form="register-form" type="submit" disabled={isLoading}
+      form="register-form" type="submit" disabled={!canSubmit || isLoading}
       className={`w-full font-headline font-bold text-[15px] py-4 rounded-xl flex items-center justify-center gap-2 transition-all ${
-        isLoading
-          ? 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'
-          : 'bg-primary hover:brightness-110 text-on-primary shadow-[0_4px_12px_rgba(0,79,69,0.2)] active:scale-[0.98]'
+        canSubmit && !isLoading
+          ? 'bg-primary hover:brightness-110 text-on-primary shadow-[0_4px_12px_rgba(0,79,69,0.2)] active:scale-[0.98]'
+          : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'
       }`}
     >
       {isLoading ? (
@@ -99,11 +102,8 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
           </div>
         )}
 
-        {/* Avatar + title */}
-        <div className="mb-5 text-center">
-          <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="material-symbols-outlined text-primary text-[36px]">person_add</span>
-          </div>
+        {/* Title */}
+        <div className="mb-5">
           <h2 className="text-xl font-headline font-bold text-primary mb-1">Create Account</h2>
           <p className="text-on-surface-variant font-body text-sm">Please enter your details to register.</p>
         </div>
@@ -155,7 +155,8 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
               </div>
               <input
                 type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                required disabled={isLoading} placeholder="+66 81 234 5678"
+                required disabled={isLoading} placeholder="0812345678"
+                pattern="^0\d{9}$"
                 className={`${inputClass} pl-9`}
               />
             </div>
