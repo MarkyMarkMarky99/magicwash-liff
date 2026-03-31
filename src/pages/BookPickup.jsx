@@ -97,13 +97,6 @@ export default function BookPickup({ userData }) {
               {' '}at <span className="font-semibold text-on-surface">{selectedTime}</span>.
             </p>
           </div>
-          <button
-            className="mt-2 w-full font-headline font-bold text-[15px] py-4 rounded-xl bg-primary text-on-primary shadow-[0_4px_12px_rgba(0,79,69,0.2)] hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            onClick={() => window.close()}
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
-            Close
-          </button>
         </div>
       </div>
     );
@@ -113,15 +106,8 @@ export default function BookPickup({ userData }) {
     <div className="h-full flex flex-col relative overflow-hidden font-body text-on-surface w-full">
 
       {/* Header */}
-      <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center gap-4 shadow-md z-50">
-        <h1 className="text-lg font-headline font-bold tracking-tight flex-1">Book Pickup</h1>
-        <button
-          className="p-1 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center"
-          aria-label="Close"
-          onClick={() => window.close()}
-        >
-          <span className="material-symbols-outlined text-2xl">close</span>
-        </button>
+      <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center shadow-md z-50">
+        <h1 className="text-lg font-headline font-bold tracking-tight">Book Pickup</h1>
       </header>
 
       {/* Main */}

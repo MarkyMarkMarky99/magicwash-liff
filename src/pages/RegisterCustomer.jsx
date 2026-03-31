@@ -109,17 +109,12 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
       {/* Header */}
       <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center gap-4 shadow-md z-10">
         <h1 className="text-lg font-headline font-bold tracking-tight flex-1">New Customer</h1>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setIsDebugMode(!isDebugMode)}
-            className={`p-1 rounded-full transition-colors flex items-center justify-center ${isDebugMode ? 'bg-yellow-500 text-black' : 'hover:bg-white/10'}`}
-          >
-            <span className="material-symbols-outlined text-2xl">bug_report</span>
-          </button>
-          <button className="p-1 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center" aria-label="Close">
-            <span className="material-symbols-outlined text-2xl">close</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsDebugMode(!isDebugMode)}
+          className={`p-1 rounded-full transition-colors flex items-center justify-center ${isDebugMode ? 'bg-yellow-500 text-black' : 'hover:bg-white/10'}`}
+        >
+          <span className="material-symbols-outlined text-2xl">bug_report</span>
+        </button>
       </header>
 
       {/* Main — no scroll */}
