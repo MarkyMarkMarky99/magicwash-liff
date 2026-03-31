@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { registerCustomer, linkLineId } from '../api/customerApi';
+import PageLayout from '../components/layout/PageLayout';
 
 export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   const [formData, setFormData] = useState(() => {
@@ -66,8 +67,31 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
 
   const inputClass = `w-full bg-surface-container border border-outline-variant/30 rounded-xl py-2.5 pr-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-on-surface-variant/60 text-on-surface font-body text-sm transition-colors disabled:opacity-60`;
 
+  const footer = (
+    <button
+      form="register-form" type="submit" disabled={isLoading}
+      className={`w-full font-headline font-bold text-[15px] py-4 rounded-xl flex items-center justify-center gap-2 transition-all ${
+        isLoading
+          ? 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'
+          : 'bg-primary hover:brightness-110 text-on-primary shadow-[0_4px_12px_rgba(0,79,69,0.2)] active:scale-[0.98]'
+      }`}
+    >
+      {isLoading ? (
+        <>
+          <span className="material-symbols-outlined text-[20px] animate-spin">sync</span>
+          Registering…
+        </>
+      ) : (
+        <>
+          <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
+          Register Account
+        </>
+      )}
+    </button>
+  );
+
   return (
-    <div className="h-full flex flex-col relative overflow-hidden font-body text-on-surface w-full">
+    <PageLayout title="New Customer" footer={footer}>
 
       {/* Success Modal */}
       {showSuccessModal && (
@@ -95,126 +119,94 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
         </div>
       )}
 
-      {/* Header */}
-      <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center shadow-md z-10">
-        <h1 className="text-lg font-headline font-bold tracking-tight">New Customer</h1>
-      </header>
+      <div className="px-5 pt-6 pb-4">
 
-      {/* Main — no scroll */}
-      <main className="flex-1 overflow-hidden">
-        <div className="px-5 pt-6 pb-4">
+        {apiError && (
+          <div className="mb-4 p-3 bg-error/10 border border-error/30 rounded-xl flex items-start gap-2">
+            <span className="material-symbols-outlined text-error text-[18px] mt-0.5 flex-shrink-0">error</span>
+            <p className="text-error text-sm font-body">{apiError}</p>
+          </div>
+        )}
 
-          {apiError && (
-            <div className="mb-4 p-3 bg-error/10 border border-error/30 rounded-xl flex items-start gap-2">
-              <span className="material-symbols-outlined text-error text-[18px] mt-0.5 flex-shrink-0">error</span>
-              <p className="text-error text-sm font-body">{apiError}</p>
+        {/* Avatar + title */}
+        <div className="mb-5 text-center">
+          <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <span className="material-symbols-outlined text-primary text-[36px]">person_add</span>
+          </div>
+          <h2 className="text-xl font-headline font-bold text-primary mb-1">Create Account</h2>
+          <p className="text-on-surface-variant font-body text-sm">Please enter your details to register.</p>
+        </div>
+
+        <form id="register-form" onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-primary font-headline font-bold text-xs mb-1.5">First Name</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[16px]">person</span>
+                </div>
+                <input
+                  type="text" name="firstName" value={formData.firstName} onChange={handleChange}
+                  required disabled={isLoading} placeholder="John"
+                  className={`${inputClass} pl-9`}
+                />
+              </div>
             </div>
-          )}
-
-          {/* Avatar + title */}
-          <div className="mb-5 text-center">
-            <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-primary text-[36px]">person_add</span>
+            <div>
+              <label className="block text-primary font-headline font-bold text-xs mb-1.5">Last Name</label>
+              <input
+                type="text" name="lastName" value={formData.lastName} onChange={handleChange}
+                required disabled={isLoading} placeholder="Doe"
+                className={`${inputClass} px-4`}
+              />
             </div>
-            <h2 className="text-xl font-headline font-bold text-primary mb-1">Create Account</h2>
-            <p className="text-on-surface-variant font-body text-sm">Please enter your details to register.</p>
           </div>
 
-          <form id="register-form" onSubmit={handleSubmit} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-primary font-headline font-bold text-xs mb-1.5">First Name</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="material-symbols-outlined text-on-surface-variant text-[16px]">person</span>
-                  </div>
-                  <input
-                    type="text" name="firstName" value={formData.firstName} onChange={handleChange}
-                    required disabled={isLoading} placeholder="John"
-                    className={`${inputClass} pl-9`}
-                  />
-                </div>
+          <div>
+            <label className="block text-primary font-headline font-bold text-xs mb-1.5">Email Address</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="material-symbols-outlined text-on-surface-variant text-[16px]">mail</span>
               </div>
-              <div>
-                <label className="block text-primary font-headline font-bold text-xs mb-1.5">Last Name</label>
-                <input
-                  type="text" name="lastName" value={formData.lastName} onChange={handleChange}
-                  required disabled={isLoading} placeholder="Doe"
-                  className={`${inputClass} px-4`}
-                />
-              </div>
+              <input
+                type="email" name="email" value={formData.email} onChange={handleChange}
+                required disabled={isLoading} placeholder="john.doe@example.com"
+                className={`${inputClass} pl-9`}
+              />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-primary font-headline font-bold text-xs mb-1.5">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[16px]">mail</span>
-                </div>
-                <input
-                  type="email" name="email" value={formData.email} onChange={handleChange}
-                  required disabled={isLoading} placeholder="john.doe@example.com"
-                  className={`${inputClass} pl-9`}
-                />
+          <div>
+            <label className="block text-primary font-headline font-bold text-xs mb-1.5">Phone Number</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="material-symbols-outlined text-on-surface-variant text-[16px]">phone</span>
               </div>
+              <input
+                type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                required disabled={isLoading} placeholder="+66 81 234 5678"
+                className={`${inputClass} pl-9`}
+              />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-primary font-headline font-bold text-xs mb-1.5">Phone Number</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[16px]">phone</span>
-                </div>
-                <input
-                  type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                  required disabled={isLoading} placeholder="+66 81 234 5678"
-                  className={`${inputClass} pl-9`}
-                />
+          <div>
+            <label className="block text-primary font-headline font-bold text-xs mb-1.5">Address</label>
+            <div className="relative">
+              <div className="absolute top-3 left-0 pl-3 pointer-events-none">
+                <span className="material-symbols-outlined text-on-surface-variant text-[16px]">location_on</span>
               </div>
+              <textarea
+                name="address" value={formData.address} onChange={handleChange}
+                required disabled={isLoading}
+                placeholder="Street, city, and postal code..."
+                className={`${inputClass} pl-9 h-[72px] resize-none`}
+              />
             </div>
+          </div>
+        </form>
+      </div>
 
-            <div>
-              <label className="block text-primary font-headline font-bold text-xs mb-1.5">Address</label>
-              <div className="relative">
-                <div className="absolute top-3 left-0 pl-3 pointer-events-none">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[16px]">location_on</span>
-                </div>
-                <textarea
-                  name="address" value={formData.address} onChange={handleChange}
-                  required disabled={isLoading}
-                  placeholder="Street, city, and postal code..."
-                  className={`${inputClass} pl-9 h-[72px] resize-none`}
-                />
-              </div>
-            </div>
-          </form>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="flex-none p-4 bg-surface border-t border-outline-variant/20 z-50">
-        <button
-          form="register-form" type="submit" disabled={isLoading}
-          className={`w-full font-headline font-bold text-[15px] py-4 rounded-xl flex items-center justify-center gap-2 transition-all ${
-            isLoading
-              ? 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'
-              : 'bg-primary hover:brightness-110 text-on-primary shadow-[0_4px_12px_rgba(0,79,69,0.2)] active:scale-[0.98]'
-          }`}
-        >
-          {isLoading ? (
-            <>
-              <span className="material-symbols-outlined text-[20px] animate-spin">sync</span>
-              Registering…
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
-              Register Account
-            </>
-          )}
-        </button>
-      </footer>
-
-    </div>
+    </PageLayout>
   );
 }
