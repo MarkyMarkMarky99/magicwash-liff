@@ -117,7 +117,7 @@ export default function BookPickup({ userData }) {
   return (
     <>
       {success && (
-        <SuccessModal title={<>Booking<br />Confirmed!</>}>
+        <SuccessModal title={<>Booking<br />Confirmed!</>} onClose={() => setSuccess(false)}>
           <div className="w-full bg-surface-container rounded-2xl p-4 flex flex-col gap-2 border border-outline-variant/30 text-sm font-body">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-[16px]">person</span>

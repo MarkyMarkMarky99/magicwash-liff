@@ -96,6 +96,7 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
       {showSuccessModal && (
         <SuccessModal
           title={<>Registration<br />Successful!</>}
+          onClose={() => onRegisterSuccess(registeredData || formData)}
           action={
             <button
               onClick={() => onRegisterSuccess(registeredData || formData)}
