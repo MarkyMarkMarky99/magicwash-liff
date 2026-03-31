@@ -141,8 +141,17 @@ export default function BookPickup({ userData }) {
                 <h3 className="font-headline font-bold text-base text-primary leading-tight">
                   {displayName}
                 </h3>
+                {userData?.phone && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '13px' }}>call</span>
+                    <p className="font-body text-xs text-on-surface-variant">{userData.phone}</p>
+                  </div>
+                )}
                 {displayAddress && (
-                  <p className="font-body text-xs text-on-surface-variant mt-0.5">{displayAddress}</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '13px' }}>location_on</span>
+                    <p className="font-body text-xs text-on-surface-variant">{displayAddress}</p>
+                  </div>
                 )}
               </div>
             </div>
