@@ -14,7 +14,6 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
       lineId: lineProfile?.userId ?? '',
     };
   });
-  const [isDebugMode, setIsDebugMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [countdown, setCountdown] = useState(3);
@@ -24,16 +23,6 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const fillMockData = () => {
-    setFormData({
-      firstName: 'Somchai',
-      lastName: 'Rakdee',
-      email: 'somchai.r@example.com',
-      phone: '0812345678',
-      address: '99/9 หมู่ 1 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110',
-    });
   };
 
   const handleSubmit = async (e) => {
@@ -107,14 +96,8 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
       )}
 
       {/* Header */}
-      <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center gap-4 shadow-md z-10">
-        <h1 className="text-lg font-headline font-bold tracking-tight flex-1">New Customer</h1>
-        <button
-          onClick={() => setIsDebugMode(!isDebugMode)}
-          className={`p-1 rounded-full transition-colors flex items-center justify-center ${isDebugMode ? 'bg-yellow-500 text-black' : 'hover:bg-white/10'}`}
-        >
-          <span className="material-symbols-outlined text-2xl">bug_report</span>
-        </button>
+      <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center shadow-md z-10">
+        <h1 className="text-lg font-headline font-bold tracking-tight">New Customer</h1>
       </header>
 
       {/* Main — no scroll */}
@@ -125,22 +108,6 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
             <div className="mb-4 p-3 bg-error/10 border border-error/30 rounded-xl flex items-start gap-2">
               <span className="material-symbols-outlined text-error text-[18px] mt-0.5 flex-shrink-0">error</span>
               <p className="text-error text-sm font-body">{apiError}</p>
-            </div>
-          )}
-
-          {isDebugMode && (
-            <div className="mb-4 p-3 bg-gray-800 text-green-400 rounded-2xl text-xs font-mono shadow-inner border border-gray-700">
-              <div className="flex justify-between items-center mb-2 border-b border-gray-600 pb-2">
-                <span className="font-bold text-white">Debug Panel</span>
-                <button
-                  onClick={fillMockData}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-[10px] hover:bg-green-500 transition-colors"
-                  type="button"
-                >
-                  Fill Mock Data
-                </button>
-              </div>
-              <pre className="overflow-x-auto">{JSON.stringify(formData, null, 2)}</pre>
             </div>
           )}
 
