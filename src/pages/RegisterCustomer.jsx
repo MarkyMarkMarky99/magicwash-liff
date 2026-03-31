@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { registerCustomer, linkLineId } from '../api/customerApi';
 import PageLayout from '../components/layout/PageLayout';
-import SuccessModal from '../components/ui/SuccessModal';
+import RegisterSuccessModal from '../components/register/RegisterSuccessModal';
 
 export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   const [formData, setFormData] = useState(() => {
@@ -18,7 +18,6 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [countdown, setCountdown] = useState(3);
   const [apiError, setApiError] = useState(null);
   const [registeredData, setRegisteredData] = useState(null);
 
@@ -35,13 +34,13 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
       const res = await registerCustomer(formData);
 
       if (res.status === 'success') {
-        setRegisteredData({ ...formData, customerId: res.data.uuid });
+        setRegisteredData({ ...formData, customerId: res.data.uuid, label: res.data.label });
         setShowSuccessModal(true);
       } else if (res.status === 'error' && res.existingCustomerId) {
         // Phone exists but no LINE account linked yet — silently link and proceed
         const linkRes = await linkLineId(res.existingCustomerId, formData.lineId);
         if (linkRes.status === 'success') {
-          setRegisteredData({ ...formData, customerId: res.existingCustomerId });
+          setRegisteredData({ ...formData, customerId: res.existingCustomerId, label: res.existingCustomerId });
           setShowSuccessModal(true);
         } else {
           setApiError(linkRes.message || 'Failed to link LINE account');
@@ -56,17 +55,7 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
     }
   };
 
-  useEffect(() => {
-    if (!showSuccessModal) return;
-    if (countdown === 0) {
-      onRegisterSuccess(registeredData || formData);
-      return;
-    }
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [showSuccessModal, countdown, onRegisterSuccess, registeredData, formData]);
-
-  const inputClass = `w-full bg-surface-container border border-outline-variant/30 rounded-xl py-2.5 pr-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-on-surface-variant/60 text-on-surface font-body text-sm transition-colors disabled:opacity-60`;
+const inputClass = `w-full bg-surface-container border border-outline-variant/30 rounded-xl py-2.5 pr-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-on-surface-variant/60 text-on-surface font-body text-sm transition-colors disabled:opacity-60`;
 
   const footer = (
     <button
@@ -94,27 +83,10 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   return (
     <>
       {showSuccessModal && (
-        <SuccessModal
-          title={<>Registration<br />Successful!</>}
-          onClose={() => onRegisterSuccess(registeredData || formData)}
-          action={
-            <button
-              onClick={() => onRegisterSuccess(registeredData || formData)}
-              className="w-full text-on-surface-variant font-semibold py-3 rounded-xl hover:bg-surface-container transition-colors text-sm font-body"
-            >
-              Skip &amp; Continue
-            </button>
-          }
-        >
-          <p className="text-on-surface-variant text-sm font-body mb-4">Your account has been created.</p>
-          <div className="w-full bg-surface-container rounded-2xl p-4 flex flex-col items-center border border-outline-variant/30">
-            <span className="text-on-surface-variant text-xs mb-1 uppercase tracking-wider font-semibold font-label">Redirecting in</span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-headline font-bold text-primary">{countdown}</span>
-              <span className="text-on-surface-variant font-medium">s</span>
-            </div>
-          </div>
-        </SuccessModal>
+        <RegisterSuccessModal
+          data={registeredData || formData}
+          onContinue={() => onRegisterSuccess(registeredData || formData)}
+        />
       )}
 
       <PageLayout title="New Customer" footer={footer}>
