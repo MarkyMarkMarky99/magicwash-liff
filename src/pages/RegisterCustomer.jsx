@@ -55,14 +55,14 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
   };
 
   useEffect(() => {
-    let timer;
-    if (showSuccessModal && countdown > 0) {
-      timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
-    } else if (showSuccessModal && countdown === 0) {
+    if (!showSuccessModal) return;
+    if (countdown === 0) {
       onRegisterSuccess(registeredData || formData);
+      return;
     }
-    return () => clearInterval(timer);
-  }, [showSuccessModal, countdown, registeredData, formData, onRegisterSuccess]);
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [showSuccessModal, countdown, onRegisterSuccess, registeredData, formData]);
 
   const inputClass = `w-full bg-surface-container border border-outline-variant/30 rounded-xl py-2.5 pr-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-on-surface-variant/60 text-on-surface font-body text-sm transition-colors disabled:opacity-60`;
 
