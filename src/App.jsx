@@ -4,12 +4,6 @@ import { getCustomerByLineId, getCustomerById } from './api/customerApi';
 import RegisterCustomer from './pages/RegisterCustomer';
 import BookPickup from './pages/BookPickup';
 
-const DEV_PREVIEWS = import.meta.env.DEV
-  ? {
-      'register-success': () => import('./pages/dev/RegisterSuccessPreview'),
-      'booking-success':  () => import('./pages/dev/BookingSuccessPreview'),
-    }
-  : {};
 
 /**
  * App flow:
@@ -24,15 +18,6 @@ export default function App() {
   const liff = useLiff();
   const [view, setView] = useState('loading'); // 'loading' | 'register' | 'booking'
   const [customerData, setCustomerData] = useState(null);
-  const [DevPreview, setDevPreview] = useState(null);
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    const key = new URLSearchParams(window.location.search).get('dev');
-    if (key && DEV_PREVIEWS[key]) {
-      DEV_PREVIEWS[key]().then((m) => setDevPreview(() => m.default));
-    }
-  }, []);
 
   useEffect(() => {
     if (liff.status === 'loading') return;
@@ -80,9 +65,7 @@ export default function App() {
     setView('booking');
   };
 
-  if (DevPreview) return <DevPreview />;
-
-  if (view === 'loading' || liff.status === 'loading') {
+if (view === 'loading' || liff.status === 'loading') {
     return <SplashScreen />;
   }
 
