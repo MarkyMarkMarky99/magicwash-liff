@@ -29,6 +29,11 @@ export function useLiff() {
     // --- Production: real LIFF flow ---
     liff.init({ liffId: LIFF_ID })
       .then(() => {
+        if (!liff.isInClient()) {
+          // Opened in external browser — not a LINE environment
+          setState({ status: 'no-line', profile: null, error: null });
+          return;
+        }
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
@@ -36,11 +41,12 @@ export function useLiff() {
         return liff.getProfile();
       })
       .then((profile) => {
-        if (!profile) return; // redirecting to login
+        if (!profile) return; // redirecting to login or no-line already set
         setState({ status: 'ready', profile, error: null });
       })
       .catch((err) => {
-        setState({ status: 'error', profile: null, error: err.message });
+        // Init failed (e.g. network error) — treat as no-line to avoid dead end
+        setState({ status: 'no-line', profile: null, error: err.message });
       });
   }, []);
 

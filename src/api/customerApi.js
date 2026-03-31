@@ -2,6 +2,17 @@ const APPSCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzaibTaFzSS7Wqt7z04MEJxRVlvka9teyyVge3VNkEA5xNRUYtWIMwS1FTUHu0LxpIx/exec';
 
 /**
+ * Look up a customer by their customer ID (UUID).
+ * @returns {{ status: 'found'|'not_found', data?: object }}
+ */
+export async function getCustomerById(customerId) {
+  const url = `${APPSCRIPT_URL}?customerId=${encodeURIComponent(customerId)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`AppScript responded ${res.status}`);
+  return res.json();
+}
+
+/**
  * Look up a customer by LINE User ID.
  * @returns {{ status: 'found'|'not_found', data?: object }}
  */
