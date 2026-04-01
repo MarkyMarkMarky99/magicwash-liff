@@ -1,9 +1,8 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createAppointment } from '../api/customerApi';
 import PageLayout from '../components/layout/PageLayout';
 import BookingSuccessModal from '../components/booking/BookingSuccessModal';
-
-const DAY_ABBREV = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const TIME_SLOTS = ['10:00-12:00', '13:00-15:00', '15:00-17:00', '18:00-20:00'];
 
 function toDateStr(d) {
@@ -26,6 +25,8 @@ function getNext14Days() {
 }
 
 export default function BookPickup({ userData }) {
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB';
   const tomorrow = (() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -45,13 +46,13 @@ export default function BookPickup({ userData }) {
   const formattedDate = (() => {
     if (!selectedDate) return '—';
     const d = new Date(selectedDate + 'T00:00:00');
-    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   })();
 
   const monthLabel = (() => {
     if (!selectedDate) return '';
     const d = new Date(selectedDate + 'T00:00:00');
-    return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    return d.toLocaleDateString(dateLocale, { month: 'short', year: 'numeric' });
   })();
 
   const displayName = userData?.customerName
@@ -102,12 +103,12 @@ export default function BookPickup({ userData }) {
         {isBooking ? (
           <>
             <span className="material-symbols-outlined text-[20px] animate-spin">sync</span>
-            Booking…
+            {t('booking.booking')}
           </>
         ) : (
           <>
             <span className="material-symbols-outlined text-[20px]">local_laundry_service</span>
-            Confirm Booking
+            {t('booking.confirm')}
           </>
         )}
       </button>
@@ -127,7 +128,7 @@ export default function BookPickup({ userData }) {
         />
       )}
 
-      <PageLayout title="Book Pickup" footer={footer} scrollable>
+      <PageLayout title={t('booking.pageTitle')} footer={footer} scrollable>
         <div className="px-6 py-5 space-y-5 pb-6">
 
         {/* Customer summary card */}
@@ -171,7 +172,7 @@ export default function BookPickup({ userData }) {
         {/* Date strip */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-headline font-bold text-base text-primary">Select New Date</h2>
+            <h2 className="font-headline font-bold text-base text-primary">{t('booking.selectDate')}</h2>
             <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-3 py-1">
               <span className="material-symbols-outlined text-primary text-[14px]" aria-hidden="true">calendar_month</span>
               <span className="font-label text-[11px] text-on-surface-variant font-semibold">{monthLabel}</span>
@@ -189,7 +190,7 @@ export default function BookPickup({ userData }) {
                 }`}
               >
                 <span className={`font-label text-[9px] uppercase font-semibold leading-none mb-0.5 ${ds === selectedDate ? 'opacity-80' : 'text-on-surface-variant'}`}>
-                  {DAY_ABBREV[d.getDay()]}
+                  {t('days', { returnObjects: true })[d.getDay()]}
                 </span>
                 <span className={`font-headline font-bold text-sm leading-none ${ds === selectedDate ? '' : 'text-on-surface'}`}>
                   {d.getDate()}
@@ -201,7 +202,7 @@ export default function BookPickup({ userData }) {
 
         {/* Time slots */}
         <section className="space-y-3">
-          <h2 className="font-headline font-bold text-base text-primary">Available Timeslots</h2>
+          <h2 className="font-headline font-bold text-base text-primary">{t('booking.availableTimeslots')}</h2>
           <div className="grid grid-cols-2 gap-2">
             {TIME_SLOTS.map((slot) => (
               <button
@@ -223,14 +224,14 @@ export default function BookPickup({ userData }) {
         {/* Notes */}
         <section className="space-y-3 pb-4">
           <label className="font-headline font-bold text-base text-primary block">
-            Notes <span className="font-normal text-on-surface-variant text-sm">(optional)</span>
+            {t('booking.notes')} <span className="font-normal text-on-surface-variant text-sm">{t('booking.optional')}</span>
           </label>
           <div className="relative group">
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full h-28 p-4 rounded-xl bg-surface-container border border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest font-body text-sm text-on-surface placeholder:text-on-surface-variant/60 resize-none transition-colors outline-none"
-              placeholder="Any special instructions for this pickup…"
+              placeholder={t('booking.notesPlaceholder')}
             />
             {!notes && (
               <div className="absolute bottom-3 right-3 pointer-events-none">

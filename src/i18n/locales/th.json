@@ -1,0 +1,46 @@
+{
+  "loading": "กำลังโหลด…",
+  "register": {
+    "pageTitle": "ลูกค้าใหม่",
+    "heading": "สร้างบัญชี",
+    "subheading": "กรุณากรอกข้อมูลเพื่อลงทะเบียน",
+    "firstName": "ชื่อ",
+    "lastName": "นามสกุล",
+    "email": "อีเมล",
+    "phone": "เบอร์โทรศัพท์",
+    "address": "ที่อยู่",
+    "addressPlaceholder": "ถนน, เมือง และรหัสไปรษณีย์...",
+    "registering": "กำลังลงทะเบียน…",
+    "submit": "ลงทะเบียน"
+  },
+  "booking": {
+    "pageTitle": "จองรับผ้า",
+    "selectDate": "เลือกวันที่",
+    "availableTimeslots": "เวลาที่รับได้",
+    "notes": "หมายเหตุ",
+    "optional": "(ไม่บังคับ)",
+    "notesPlaceholder": "คำแนะนำพิเศษสำหรับการรับผ้า…",
+    "booking": "กำลังจอง…",
+    "confirm": "ยืนยันการจอง"
+  },
+  "days": ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"],
+  "bookingSuccess": {
+    "title": "จองสำเร็จ!",
+    "appointment": "นัดหมาย",
+    "date": "วันที่",
+    "time": "เวลา",
+    "done": "เสร็จสิ้น"
+  },
+  "registerSuccess": {
+    "line1": "ลงทะเบียน",
+    "line2": "สำเร็จ!",
+    "customerId": "รหัสลูกค้า",
+    "bookAppointment": "จองนัดหมาย"
+  },
+  "labels": {
+    "name": "ชื่อ",
+    "phone": "โทร",
+    "address": "ที่อยู่",
+    "email": "อีเมล"
+  }
+}

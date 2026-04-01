@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { registerCustomer, linkLineId } from '../api/customerApi';
 import PageLayout from '../components/layout/PageLayout';
 import RegisterSuccessModal from '../components/register/RegisterSuccessModal';
 
 export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState(() => {
     const displayName = lineProfile?.displayName ?? '';
     const [firstName = '', ...rest] = displayName.split(' ');
@@ -72,12 +74,12 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
       {isLoading ? (
         <>
           <span className="material-symbols-outlined text-[20px] animate-spin">sync</span>
-          Registering…
+          {t('register.registering')}
         </>
       ) : (
         <>
           <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
-          Register Account
+          {t('register.submit')}
         </>
       )}
     </button>
@@ -92,7 +94,7 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
         />
       )}
 
-      <PageLayout title="New Customer" footer={footer}>
+      <PageLayout title={t('register.pageTitle')} footer={footer}>
         <div className="px-5 pt-6 pb-4">
 
         {apiError && (
@@ -104,14 +106,14 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
 
         {/* Title */}
         <div className="mb-5">
-          <h2 className="text-xl font-headline font-bold text-primary mb-1">Create Account</h2>
-          <p className="text-on-surface-variant font-body text-sm">Please enter your details to register.</p>
+          <h2 className="text-xl font-headline font-bold text-primary mb-1">{t('register.heading')}</h2>
+          <p className="text-on-surface-variant font-body text-sm">{t('register.subheading')}</p>
         </div>
 
         <form id="register-form" onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-primary font-headline font-bold text-xs mb-1.5">First Name</label>
+              <label className="block text-primary font-headline font-bold text-xs mb-1.5">{t('register.firstName')}</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <span className="material-symbols-outlined text-on-surface-variant text-[16px]">person</span>
@@ -124,7 +126,7 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
               </div>
             </div>
             <div>
-              <label className="block text-primary font-headline font-bold text-xs mb-1.5">Last Name</label>
+              <label className="block text-primary font-headline font-bold text-xs mb-1.5">{t('register.lastName')}</label>
               <input
                 type="text" name="lastName" value={formData.lastName} onChange={handleChange}
                 required disabled={isLoading} placeholder="Doe"
@@ -134,7 +136,7 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
           </div>
 
           <div>
-            <label className="block text-primary font-headline font-bold text-xs mb-1.5">Email Address</label>
+            <label className="block text-primary font-headline font-bold text-xs mb-1.5">{t('register.email')}</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <span className="material-symbols-outlined text-on-surface-variant text-[16px]">mail</span>
@@ -148,7 +150,7 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
           </div>
 
           <div>
-            <label className="block text-primary font-headline font-bold text-xs mb-1.5">Phone Number</label>
+            <label className="block text-primary font-headline font-bold text-xs mb-1.5">{t('register.phone')}</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <span className="material-symbols-outlined text-on-surface-variant text-[16px]">phone</span>
@@ -163,7 +165,7 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
           </div>
 
           <div>
-            <label className="block text-primary font-headline font-bold text-xs mb-1.5">Address</label>
+            <label className="block text-primary font-headline font-bold text-xs mb-1.5">{t('register.address')}</label>
             <div className="relative">
               <div className="absolute top-3 left-0 pl-3 pointer-events-none">
                 <span className="material-symbols-outlined text-on-surface-variant text-[16px]">location_on</span>
@@ -171,7 +173,7 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
               <textarea
                 name="address" value={formData.address} onChange={handleChange}
                 required disabled={isLoading}
-                placeholder="Street, city, and postal code..."
+                placeholder={t('register.addressPlaceholder')}
                 className={`${inputClass} pl-9 h-[72px] resize-none`}
               />
             </div>

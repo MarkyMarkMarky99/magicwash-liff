@@ -1,0 +1,46 @@
+{
+  "loading": "Loading…",
+  "register": {
+    "pageTitle": "New Customer",
+    "heading": "Create Account",
+    "subheading": "Please enter your details to register.",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email Address",
+    "phone": "Phone Number",
+    "address": "Address",
+    "addressPlaceholder": "Street, city, and postal code...",
+    "registering": "Registering…",
+    "submit": "Register Account"
+  },
+  "booking": {
+    "pageTitle": "Book Pickup",
+    "selectDate": "Select New Date",
+    "availableTimeslots": "Available Timeslots",
+    "notes": "Notes",
+    "optional": "(optional)",
+    "notesPlaceholder": "Any special instructions for this pickup…",
+    "booking": "Booking…",
+    "confirm": "Confirm Booking"
+  },
+  "days": ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"],
+  "bookingSuccess": {
+    "title": "Booking Confirmed!",
+    "appointment": "Appointment",
+    "date": "Date",
+    "time": "Time",
+    "done": "Done"
+  },
+  "registerSuccess": {
+    "line1": "Registration",
+    "line2": "Successful!",
+    "customerId": "Customer ID",
+    "bookAppointment": "Book Appointment"
+  },
+  "labels": {
+    "name": "Name",
+    "phone": "Phone",
+    "address": "Address",
+    "email": "Email"
+  }
+}

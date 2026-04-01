@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLiff } from './hooks/useLiff';
 import { getCustomerByLineId, getCustomerById } from './api/customerApi';
 import RegisterCustomer from './pages/RegisterCustomer';
@@ -83,10 +84,11 @@ if (view === 'loading' || liff.status === 'loading') {
 }
 
 function SplashScreen() {
+  const { t } = useTranslation();
   return (
     <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col items-center justify-center gap-4">
       <span className="material-symbols-outlined text-primary text-[56px] animate-pulse">local_laundry_service</span>
-      <p className="font-body text-on-surface-variant text-sm">Loading…</p>
+      <p className="font-body text-on-surface-variant text-sm">{t('loading')}</p>
     </div>
   );
 }
