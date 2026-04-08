@@ -20,7 +20,7 @@ export default function OrderGallery({ orderId }) {
   return (
     <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
       <PageLayout title={<span className="flex items-center gap-2"><img src="/logo.png" alt="logo" className="h-7 w-7 rounded-full object-cover" />Magicwash Laundry</span>} scrollable>
-      <div className="p-4">
+      <div className="p-4 h-full">
         {status === 'loading' && (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <span className="material-symbols-outlined text-primary text-5xl animate-pulse">local_laundry_service</span>
