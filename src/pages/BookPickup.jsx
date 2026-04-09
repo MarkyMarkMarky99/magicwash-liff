@@ -128,7 +128,7 @@ export default function BookPickup({ userData }) {
         />
       )}
 
-      <PageLayout title={t('booking.pageTitle')} footer={footer} scrollable>
+      <PageLayout footer={footer} scrollable>
         <div className="px-6 py-5 space-y-5 pb-6">
 
         {/* Customer summary card */}

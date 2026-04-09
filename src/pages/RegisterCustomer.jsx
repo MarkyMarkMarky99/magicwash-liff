@@ -94,7 +94,7 @@ const inputClass = `w-full bg-surface-container border border-outline-variant/30
         />
       )}
 
-      <PageLayout title={t('register.pageTitle')} footer={footer}>
+      <PageLayout footer={footer}>
         <div className="px-5 pt-6 pb-4">
 
         {apiError && (

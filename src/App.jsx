@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLiff } from './hooks/useLiff';
 import { getCustomerByLineId, getCustomerById } from './api/customerApi';
@@ -6,17 +6,57 @@ import RegisterCustomer from './pages/RegisterCustomer';
 import BookPickup from './pages/BookPickup';
 import OrderChat from './pages/OrderChat';
 import OrderGallery from './pages/OrderGallery';
+import CustomerOrders from './pages/CustomerOrders';
+import LanguageSwitcher from './components/ui/LanguageSwitcher';
 
+/** Pages use this context to set / clear the header's back button. */
+export const HeaderContext = createContext(null);
+
+/**
+ * Shared app shell — renders the single header used by every page.
+ * Pages that need a back button call setOnBack (from HeaderContext).
+ */
+function AppShell({ children }) {
+  const [onBack, setOnBack] = useState(null);
+
+  return (
+    <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
+      <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center justify-between shadow-md z-50">
+        <div className="flex items-center gap-1">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="text-on-primary -ml-1.5 mr-0.5 h-7 flex items-center px-1 hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+            >
+              <span className="material-symbols-outlined text-[22px] leading-none">arrow_back</span>
+            </button>
+          )}
+          <h1 className="text-lg font-headline font-bold tracking-tight flex items-center gap-2">
+            <img src="/logo.png" alt="logo" className="h-7 w-7 rounded-full object-cover" />
+            Magicwash Laundry
+          </h1>
+        </div>
+        <LanguageSwitcher />
+      </header>
+
+      <HeaderContext.Provider value={setOnBack}>
+        {children}
+      </HeaderContext.Provider>
+    </div>
+  );
+}
 
 /**
  * App flow:
  *  A. URL has ?gallery&orderId=xxx
  *     → render OrderGallery directly, no LIFF check
- *  B. URL has ?custId=xxx
+ *  B. URL has ?orders&custId=xxx
+ *     → render CustomerOrders directly, no LIFF check
+ *  C. URL has ?custId=xxx
  *     → load customer by ID → BookPickup (or Register if not found)
- *  C. Opened inside LINE (LIFF ready)
+ *  D. Opened inside LINE (LIFF ready)
  *     → look up by LINE userId → BookPickup or RegisterCustomer
- *  D. Opened in normal browser (no-line)
+ *  E. Opened in normal browser (no-line)
  *     → go straight to RegisterCustomer (no LINE profile)
  */
 export default function App() {
@@ -25,7 +65,21 @@ export default function App() {
   // --- Gallery route: standalone, no LIFF ---
   // URL: /?gallery&orderId=ORD-12345
   if (params.has('gallery')) {
-    return <OrderGallery orderId={params.get('orderId')} />;
+    return (
+      <AppShell>
+        <OrderGallery orderId={params.get('orderId')} />
+      </AppShell>
+    );
+  }
+
+  // --- Customer orders route: standalone, no LIFF ---
+  // URL: /?orders&custId=CUS-12345
+  if (params.has('orders')) {
+    return (
+      <AppShell>
+        <CustomerOrders custId={params.get('custId')} />
+      </AppShell>
+    );
   }
 
   return <AppMain />;
@@ -82,7 +136,7 @@ function AppMain() {
     setView('booking');
   };
 
-  // Dev preview: ?dev=chat — bypass LIFF wait entirely
+  // Dev preview: ?dev=chat — OrderChat has its own ChatHeader, keep standalone container
   const devParam = new URLSearchParams(window.location.search).get('dev');
   const dummyUser = { customerName: 'บุสรินทร์ หอมวิเชียร (โบ)', customerId: 'CUS-88291', phone: '081-234-5678', address: '123 ถนนสุขุมวิท, กรุงเทพฯ' };
   if (devParam === 'chat') {
@@ -98,7 +152,7 @@ function AppMain() {
   }
 
   return (
-    <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
+    <AppShell>
       {view === 'booking'
         ? <BookPickup userData={customerData} />
         : <RegisterCustomer
@@ -106,7 +160,7 @@ function AppMain() {
             onRegisterSuccess={handleRegisterSuccess}
           />
       }
-    </div>
+    </AppShell>
   );
 }
 
