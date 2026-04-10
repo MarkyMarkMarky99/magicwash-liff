@@ -23,7 +23,13 @@ const SHEET_NAME = 'LaundryPhotos';
  * @param {string} orderId
  * @returns {Promise<Array<{ imageUrl: string, label: string }>>}
  */
+const cache = new Map();
+
 export async function getPhotosByOrderId(orderId) {
+  if (cache.has(orderId)) {
+    console.log('[gvizApi] cache hit:', orderId);
+    return cache.get(orderId);
+  }
   const query = `SELECT F,G WHERE B='${orderId}'`;
   const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq`
     + `?sheet=${encodeURIComponent(SHEET_NAME)}`
