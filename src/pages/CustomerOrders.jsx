@@ -14,7 +14,6 @@ export default function CustomerOrders({ custId }) {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [sheetTop, setSheetTop]             = useState(null);
   const setOnBack   = useContext(HeaderContext);
-  const wrapperRef  = useRef(null);
   const cardSectionRef = useRef(null);
 
   useEffect(() => {
@@ -43,11 +42,10 @@ export default function CustomerOrders({ custId }) {
   }, [galleryOrderId]);
 
   const handleSelectOrder = (orderId) => {
-    // Measure the top of the OrderList relative to the wrapper
-    if (wrapperRef.current && cardSectionRef.current) {
-      const wrapperTop = wrapperRef.current.getBoundingClientRect().top;
-      const cardBottom = cardSectionRef.current.getBoundingClientRect().bottom;
-      setSheetTop(cardBottom - wrapperTop);
+    // offsetTop + offsetHeight gives layout position relative to the positioned wrapper,
+    // unaffected by how far the user has scrolled inside the inner scrollable div.
+    if (cardSectionRef.current) {
+      setSheetTop(cardSectionRef.current.offsetTop + cardSectionRef.current.offsetHeight);
     } else {
       setSheetTop(null);
     }
@@ -61,7 +59,6 @@ export default function CustomerOrders({ custId }) {
 
   return (
     <div
-      ref={wrapperRef}
       className="flex-1 min-h-0 flex flex-col relative overflow-hidden font-body text-on-surface w-full"
     >
 
