@@ -1,6 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getPhotosByOrderId } from '../api/gvizApi';
 import PageLayout from '../components/layout/PageLayout';
+
+function GalleryImage({ src, alt, delay }) {
+  const [activeSrc, setActiveSrc] = useState('');
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => setActiveSrc(src), delay);
+    return () => clearTimeout(timerRef.current);
+  }, [src, delay]);
+
+  if (!activeSrc) return <div className="w-full h-full bg-surface-variant animate-pulse" />;
+
+  return (
+    <img
+      src={activeSrc}
+      alt={alt}
+      className="w-full h-full object-cover"
+      loading="lazy"
+    />
+  );
+}
 
 export default function OrderGallery({ orderId, onBack }) {
   const [photos, setPhotos]     = useState([]);
@@ -51,11 +72,10 @@ export default function OrderGallery({ orderId, onBack }) {
               onClick={() => setLightbox(i)}
               className="rounded-lg overflow-hidden bg-surface-variant aspect-square focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <img
-                src={photo.imageUrl}
+              <GalleryImage
+                src={`${photo.imageUrl}=s200`}
                 alt={photo.label || `รูปที่ ${i + 1}`}
-                className="w-full h-full object-cover"
-                loading="lazy"
+                delay={i * 1000}
               />
             </button>
           ))}
