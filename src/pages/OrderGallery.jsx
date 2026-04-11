@@ -1,31 +1,52 @@
 import { useState, useEffect, useRef } from 'react';
 import { getPhotosByOrderId } from '../api/gvizApi';
+import { fetchCachedImage, peekImageCache } from '../api/imageCache';
 import PageLayout from '../components/layout/PageLayout';
 
 function GalleryImage({ src, alt, delay }) {
-  const [activeSrc, setActiveSrc] = useState('');
+  const [blobUrl, setBlobUrl] = useState(null);
   const timerRef = useRef(null);
+  const blobRef = useRef(null);
+
+  const setBlob = (url) => { blobRef.current = url; setBlobUrl(url); };
 
   useEffect(() => {
-    timerRef.current = setTimeout(() => setActiveSrc(src), delay);
-    return () => clearTimeout(timerRef.current);
+    let cancelled = false;
+
+    // Check cache immediately — no delay needed if already stored
+    peekImageCache(src).then((cached) => {
+      if (cancelled) return;
+      if (cached) { setBlob(cached); return; }
+
+      // Cache miss — stagger the network request to avoid burst 429
+      timerRef.current = setTimeout(() => {
+        fetchCachedImage(src)
+          .then((url) => { if (!cancelled) setBlob(url); })
+          .catch(() => {/* show placeholder on error */});
+      }, delay);
+    });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timerRef.current);
+      if (blobRef.current) URL.revokeObjectURL(blobRef.current);
+    };
   }, [src, delay]);
 
-  if (!activeSrc) return <div className="w-full h-full bg-surface-variant animate-pulse" />;
+  if (!blobUrl) return <div className="w-full h-full bg-surface-variant animate-pulse" />;
 
   return (
     <img
-      src={activeSrc}
+      src={blobUrl}
       alt={alt}
       className="w-full h-full object-cover"
-      loading="lazy"
     />
   );
 }
 
 export default function OrderGallery({ orderId, onBack }) {
-  const [photos, setPhotos]     = useState([]);
-  const [status, setStatus]     = useState('loading');
+  const [photos, setPhotos] = useState([]);
+  const [status, setStatus] = useState('loading');
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -75,7 +96,7 @@ export default function OrderGallery({ orderId, onBack }) {
               <GalleryImage
                 src={`${photo.imageUrl}=s200`}
                 alt={photo.label || `รูปที่ ${i + 1}`}
-                delay={i * 1000}
+                delay={i * 200}
               />
             </button>
           ))}
