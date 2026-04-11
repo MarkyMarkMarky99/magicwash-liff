@@ -23,7 +23,8 @@ export default function CustomerOrders({ custId }) {
 
     const applyCustomer = (res) => {
       setCustomer(res.data);
-      setOrders([...(res.data.orders ?? [])].sort((a, b) => new Date(b.date) - new Date(a.date)));
+      const parseDate = (s) => { if (!s) return 0; const p = s.split('/'); return p.length === 3 ? new Date(p[2], p[1] - 1, p[0]) : new Date(s); };
+      setOrders([...(res.data.orders ?? [])].sort((a, b) => parseDate(b.date) - parseDate(a.date)));
     };
 
     getCustomerById(custId, (fresh) => {

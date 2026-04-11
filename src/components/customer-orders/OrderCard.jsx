@@ -8,10 +8,18 @@ const STATUS_CONFIG = {
   'รับแล้ว':   { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',     avatar: 'bg-teal-50 text-teal-700'    },
 };
 
+function parseDate(raw) {
+  if (!raw) return null;
+  // Handle DD/MM/YYYY from Google Sheets (e.g. "09/04/2026")
+  const parts = raw.split('/');
+  if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);
+  return new Date(raw);
+}
+
 function formatDate(raw) {
   if (!raw) return '';
-  const d = new Date(raw);
-  if (isNaN(d)) return raw;
+  const d = parseDate(raw);
+  if (!d || isNaN(d)) return raw;
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
