@@ -5,10 +5,11 @@ import PageLayout from '../components/layout/PageLayout';
 
 function GalleryImage({ src, alt, delay }) {
   const [blobUrl, setBlobUrl] = useState(null);
+  const [imgState, setImgState] = useState('loading'); // 'loading' | 'done' | 'error'
   const timerRef = useRef(null);
   const blobRef = useRef(null);
 
-  const setBlob = (url) => { blobRef.current = url; setBlobUrl(url); };
+  const setBlob = (url) => { blobRef.current = url; setBlobUrl(url); setImgState('done'); };
 
   useEffect(() => {
     let cancelled = false;
@@ -22,7 +23,7 @@ function GalleryImage({ src, alt, delay }) {
       timerRef.current = setTimeout(() => {
         fetchCachedImage(src)
           .then((url) => { if (!cancelled) setBlob(url); })
-          .catch(() => {/* show placeholder on error */});
+          .catch(() => { if (!cancelled) setImgState('error'); });
       }, delay);
     });
 
@@ -33,7 +34,21 @@ function GalleryImage({ src, alt, delay }) {
     };
   }, [src, delay]);
 
-  if (!blobUrl) return <div className="w-full h-full bg-surface-variant animate-pulse" />;
+  if (imgState === 'error') {
+    return (
+      <div className="w-full h-full bg-surface-variant flex items-center justify-center">
+        <span className="material-symbols-outlined text-on-surface-variant text-[22px]">close</span>
+      </div>
+    );
+  }
+
+  if (imgState === 'loading') {
+    return (
+      <div className="w-full h-full bg-surface-variant flex items-center justify-center">
+        <span className="material-symbols-outlined text-on-surface-variant text-[22px] animate-spin">progress_activity</span>
+      </div>
+    );
+  }
 
   return (
     <img

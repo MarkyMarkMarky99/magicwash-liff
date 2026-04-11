@@ -1,5 +1,5 @@
 const CACHE_NAME = 'mw-images-v1';
-const MAX_RETRIES = 4;
+const MAX_RETRIES = 3;
 
 /**
  * Check if url is already in Cache API without fetching.
