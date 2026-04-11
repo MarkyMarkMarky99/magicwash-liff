@@ -1,5 +1,6 @@
-import { useState, useEffect, useContext, useRef } from 'react';
+import { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { getCustomerById } from '../api/customerApi';
+import { lsClear } from '../api/localCache';
 import { HeaderContext } from '../App';
 import CustomerCard from '../components/customer-orders/CustomerCard';
 import OrderList from '../components/customer-orders/OrderList';
@@ -10,6 +11,7 @@ export default function CustomerOrders({ custId }) {
   const [customer, setCustomer]             = useState(null);
   const [orders, setOrders]                 = useState([]);
   const [status, setStatus]                 = useState('loading');
+  const [refreshing, setRefreshing]         = useState(false);
   const [galleryOrderId, setGalleryOrderId] = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [sheetTop, setSheetTop]             = useState(null);
@@ -19,18 +21,17 @@ export default function CustomerOrders({ custId }) {
   useEffect(() => {
     if (!custId) { setStatus('error'); return; }
 
-    getCustomerById(custId)
+    const applyCustomer = (res) => {
+      setCustomer(res.data);
+      setOrders([...(res.data.orders ?? [])].sort((a, b) => new Date(b.date) - new Date(a.date)));
+    };
+
+    getCustomerById(custId, (fresh) => {
+      if (fresh.status === 'found') applyCustomer(fresh);
+    })
       .then((res) => {
-        if (res.status === 'found') {
-          setCustomer(res.data);
-          const sorted = [...(res.data.orders ?? [])].sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
-          );
-          setOrders(sorted);
-          setStatus('done');
-        } else {
-          setStatus('error');
-        }
+        if (res.status === 'found') { applyCustomer(res); setStatus('done'); }
+        else setStatus('error');
       })
       .catch(() => setStatus('error'));
   }, [custId]);
@@ -40,6 +41,24 @@ export default function CustomerOrders({ custId }) {
   useEffect(() => {
     setOnBack(galleryOrderId ? () => () => setGalleryOrderId(null) : null);
   }, [galleryOrderId]);
+
+  const handleRefresh = useCallback(async () => {
+    if (!custId || refreshing) return;
+    lsClear('mw_customer_id_' + custId);
+    setRefreshing(true);
+    try {
+      const res = await getCustomerById(custId);
+      if (res.status === 'found') {
+        setCustomer(res.data);
+        const sorted = [...(res.data.orders ?? [])].sort(
+          (a, b) => new Date(b.date) - new Date(a.date)
+        );
+        setOrders(sorted);
+        setStatus('done');
+      }
+    } catch { /* silently fail */ }
+    finally { setRefreshing(false); }
+  }, [custId, refreshing]);
 
   const handleSelectOrder = (orderId) => {
     // offsetTop + offsetHeight gives layout position relative to the positioned wrapper,
@@ -99,6 +118,8 @@ export default function CustomerOrders({ custId }) {
                   orders={orders}
                   onViewPhotos={setGalleryOrderId}
                   onSelectOrder={handleSelectOrder}
+                  onRefresh={handleRefresh}
+                  refreshing={refreshing}
                 />
               </div>
             </>

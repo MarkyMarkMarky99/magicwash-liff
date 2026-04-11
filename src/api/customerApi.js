@@ -5,22 +5,64 @@ const APPSCRIPT_URL =
  * Look up a customer by their customer ID (UUID).
  * @returns {{ status: 'found'|'not_found', data?: object }}
  */
-export async function getCustomerById(customerId) {
-  const url = `${APPSCRIPT_URL}?customerId=${encodeURIComponent(customerId)}`;
+import { lsGet, lsSet, lsGetStale } from './localCache';
+
+const CACHE_PREFIX = 'mw_customer_';
+
+async function _fetchAndCache(url, cacheKey) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`AppScript responded ${res.status}`);
-  return res.json();
+  const json = await res.json();
+  if (json.status === 'found') lsSet(cacheKey, json);
+  return json;
+}
+
+/**
+ * Look up a customer by their customer ID (UUID).
+ * Supports Stale-While-Revalidate: pass onRevalidate to receive fresh data in background.
+ * @param {string} customerId
+ * @param {function} [onRevalidate] - called with fresh data when stale cache is revalidated
+ * @returns {{ status: 'found'|'not_found', data?: object }}
+ */
+export async function getCustomerById(customerId, onRevalidate) {
+  const cacheKey = CACHE_PREFIX + `id_${customerId}`;
+  const { value, isStale } = lsGetStale(cacheKey);
+
+  if (value) {
+    if (isStale) {
+      const url = `${APPSCRIPT_URL}?customerId=${encodeURIComponent(customerId)}`;
+      const fresh = _fetchAndCache(url, cacheKey);
+      if (onRevalidate) fresh.then(onRevalidate).catch(() => {});
+    }
+    return value;
+  }
+
+  const url = `${APPSCRIPT_URL}?customerId=${encodeURIComponent(customerId)}`;
+  return _fetchAndCache(url, cacheKey);
 }
 
 /**
  * Look up a customer by LINE User ID.
+ * Supports Stale-While-Revalidate: pass onRevalidate to receive fresh data in background.
+ * @param {string} lineUserId
+ * @param {function} [onRevalidate] - called with fresh data when stale cache is revalidated
  * @returns {{ status: 'found'|'not_found', data?: object }}
  */
-export async function getCustomerByLineId(lineUserId) {
+export async function getCustomerByLineId(lineUserId, onRevalidate) {
+  const cacheKey = CACHE_PREFIX + `line_${lineUserId}`;
+  const { value, isStale } = lsGetStale(cacheKey);
+
+  if (value) {
+    if (isStale) {
+      const url = `${APPSCRIPT_URL}?lineUserId=${encodeURIComponent(lineUserId)}`;
+      const fresh = _fetchAndCache(url, cacheKey);
+      if (onRevalidate) fresh.then(onRevalidate).catch(() => {});
+    }
+    return value;
+  }
+
   const url = `${APPSCRIPT_URL}?lineUserId=${encodeURIComponent(lineUserId)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`AppScript responded ${res.status}`);
-  return res.json();
+  return _fetchAndCache(url, cacheKey);
 }
 
 /**

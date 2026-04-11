@@ -23,13 +23,17 @@ const SHEET_NAME = 'LaundryPhotos';
  * @param {string} orderId
  * @returns {Promise<Array<{ imageUrl: string, label: string }>>}
  */
-const cache = new Map();
+import { lsGet, lsSet } from './localCache';
+
+const CACHE_PREFIX = 'mw_photos_';
 
 export async function getPhotosByOrderId(orderId) {
-  if (cache.has(orderId)) {
+  const cached = lsGet(CACHE_PREFIX + orderId);
+  if (cached) {
     console.log('[gvizApi] cache hit:', orderId);
-    return cache.get(orderId);
+    return cached;
   }
+
   const query = `SELECT F,G WHERE B='${orderId}'`;
   const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq`
     + `?sheet=${encodeURIComponent(SHEET_NAME)}`
@@ -44,10 +48,13 @@ export async function getPhotosByOrderId(orderId) {
   const json = JSON.parse(text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
 
   const rows = json?.table?.rows ?? [];
-  return rows
+  const photos = rows
     .map((row) => ({
       imageUrl: toDirectUrl(row.c?.[0]?.v ?? null),
       label:    row.c?.[1]?.v ?? '',
     }))
     .filter((item) => item.imageUrl);
+
+  lsSet(CACHE_PREFIX + orderId, photos);
+  return photos;
 }

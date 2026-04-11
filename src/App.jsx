@@ -97,14 +97,12 @@ function AppMain() {
 
     // --- Case A: custId in URL ---
     if (custId) {
-      getCustomerById(custId)
+      getCustomerById(custId, (fresh) => {
+        if (fresh.status === 'found') setCustomerData(fresh.data);
+      })
         .then((res) => {
-          if (res.status === 'found') {
-            setCustomerData(res.data);
-            setView('booking');
-          } else {
-            setView('register');
-          }
+          if (res.status === 'found') { setCustomerData(res.data); setView('booking'); }
+          else setView('register');
         })
         .catch(() => setView('register'));
       return;
@@ -112,14 +110,12 @@ function AppMain() {
 
     // --- Case B: inside LINE ---
     if (liff.status === 'ready') {
-      getCustomerByLineId(liff.profile.userId)
+      getCustomerByLineId(liff.profile.userId, (fresh) => {
+        if (fresh.status === 'found') setCustomerData(fresh.data);
+      })
         .then((res) => {
-          if (res.status === 'found') {
-            setCustomerData(res.data);
-            setView('booking');
-          } else {
-            setView('register');
-          }
+          if (res.status === 'found') { setCustomerData(res.data); setView('booking'); }
+          else setView('register');
         })
         .catch(() => setView('register'));
       return;

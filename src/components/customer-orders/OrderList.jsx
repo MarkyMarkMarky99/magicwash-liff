@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import OrderCard from './OrderCard';
 
-export default function OrderList({ orders, onViewPhotos, onSelectOrder }) {
+export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefresh, refreshing = false }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -17,14 +17,20 @@ export default function OrderList({ orders, onViewPhotos, onSelectOrder }) {
           <h2 className="font-headline font-bold text-[13px] tracking-tight">ประวัติออเดอร์</h2>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 py-1">
+          <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 h-[22px]">
             <span className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
               {orders.length} orders
             </span>
           </div>
-          <span className={`material-symbols-outlined text-primary text-[16px] transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}>
-            expand_more
-          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onRefresh?.(); }}
+            disabled={refreshing}
+            className="h-[22px] w-[22px] flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition-all disabled:opacity-50"
+          >
+            <span className={`material-symbols-outlined text-primary text-[16px] ${refreshing ? 'animate-spin' : ''}`}>
+              refresh
+            </span>
+          </button>
         </div>
       </div>
 

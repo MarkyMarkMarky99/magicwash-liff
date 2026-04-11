@@ -22,7 +22,9 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
   useEffect(() => {
     setStatus('loading');
     setOrder(null);
-    getOrderById(orderId)
+    getOrderById(orderId, (fresh) => {
+      if (fresh.status === 'found') setOrder(fresh.data);
+    })
       .then((res) => {
         if (res.status === 'found') { setOrder(res.data); setStatus('done'); }
         else setStatus('error');
