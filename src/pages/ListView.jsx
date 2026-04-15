@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { HeaderContext } from '../App';
+import { HeaderContext, NavigateContext } from '../App';
 
 /**
  * Generic full-page list view.
@@ -32,14 +32,15 @@ export default function ListView({
   const [status, setStatus]       = useState('loading');
   const [detailId, setDetailId]   = useState(null);
   const [galleryId, setGalleryId] = useState(null);
-  const setOnBack = useContext(HeaderContext);
+  const setOnBack  = useContext(HeaderContext);
+  const navigate   = useContext(NavigateContext);
 
   // Sync back button: gallery → close gallery | default → backUrl
   useEffect(() => {
     if (galleryId && renderGallery) {
       setOnBack(() => () => setGalleryId(null));
     } else if (backUrl) {
-      setOnBack(() => () => { window.location.href = backUrl; });
+      setOnBack(() => () => navigate(backUrl));
     } else {
       setOnBack(null);
     }

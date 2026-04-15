@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { getCustomerById } from '../api/customerApi';
 import { lsClear } from '../api/localCache';
 import { parseSheetDate } from '../api/dateUtils';
-import { HeaderContext } from '../App';
+import { HeaderContext, NavigateContext } from '../App';
 import CustomerCard from '../components/customer-orders/CustomerCard';
 import OrderList from '../components/customer-orders/OrderList';
 import OrderDetailSheet from '../components/customer-orders/OrderDetailSheet';
@@ -17,6 +17,7 @@ export default function CustomerOrders({ custId }) {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [sheetTop, setSheetTop]             = useState(null);
   const setOnBack   = useContext(HeaderContext);
+  const navigate    = useContext(NavigateContext);
   const cardSectionRef = useRef(null);
 
   useEffect(() => {
@@ -123,7 +124,7 @@ export default function CustomerOrders({ custId }) {
                   onSelectOrder={handleSelectOrder}
                   onRefresh={handleRefresh}
                   refreshing={refreshing}
-                  onViewAll={() => { window.location.href = `/?list&type=orders&custId=${custId}`; }}
+                  onViewAll={() => navigate(`/?list&type=orders&custId=${custId}`)}
                 />
               </div>
             </>

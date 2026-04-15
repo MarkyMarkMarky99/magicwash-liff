@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLiff } from './hooks/useLiff';
+import { useRoute } from './hooks/useRoute';
 import { getCustomerByLineId, getCustomerById } from './api/customerApi';
 import { parseSheetDate } from './api/dateUtils';
 import RegisterCustomer from './pages/RegisterCustomer';
@@ -48,11 +49,14 @@ const LIST_CONFIG = {
 /** Pages use this context to set / clear the header's back button. */
 export const HeaderContext = createContext(null);
 
+/** Client-side navigate function — use instead of window.location.href to avoid full reloads. */
+export const NavigateContext = createContext(null);
+
 /**
  * Shared app shell — renders the single header used by every page.
  * Pages that need a back button call setOnBack (from HeaderContext).
  */
-function AppShell({ children }) {
+function AppShell({ navigate, children }) {
   const [onBack, setOnBack] = useState(null);
 
   return (
@@ -75,9 +79,11 @@ function AppShell({ children }) {
         <LanguageSwitcher />
       </header>
 
-      <HeaderContext.Provider value={setOnBack}>
-        {children}
-      </HeaderContext.Provider>
+      <NavigateContext.Provider value={navigate}>
+        <HeaderContext.Provider value={setOnBack}>
+          {children}
+        </HeaderContext.Provider>
+      </NavigateContext.Provider>
     </div>
   );
 }
@@ -96,7 +102,7 @@ function AppShell({ children }) {
  *     → go straight to RegisterCustomer (no LINE profile)
  */
 export default function App() {
-  const params = new URLSearchParams(window.location.search);
+  const { params, navigate } = useRoute();
 
   // --- Generic list route: standalone, no LIFF ---
   // URL: /?list&type=orders&custId=CUS-12345
@@ -104,7 +110,7 @@ export default function App() {
     const cfg = LIST_CONFIG[params.get('type')];
     if (cfg) {
       return (
-        <AppShell>
+        <AppShell navigate={navigate}>
           <ListView
             title={cfg.title}
             icon={cfg.icon}
@@ -126,7 +132,7 @@ export default function App() {
   // URL: /?gallery&orderId=ORD-12345
   if (params.has('gallery')) {
     return (
-      <AppShell>
+      <AppShell navigate={navigate}>
         <OrderGallery orderId={params.get('orderId')} />
       </AppShell>
     );
@@ -136,7 +142,7 @@ export default function App() {
   // URL: /?orders&custId=CUS-12345
   if (params.has('orders')) {
     return (
-      <AppShell>
+      <AppShell navigate={navigate}>
         <CustomerOrders custId={params.get('custId')} />
       </AppShell>
     );
