@@ -123,6 +123,7 @@ export default function CustomerOrders({ custId }) {
                   onSelectOrder={handleSelectOrder}
                   onRefresh={handleRefresh}
                   refreshing={refreshing}
+                  onViewAll={() => { window.location.href = `/?list&type=orders&custId=${custId}`; }}
                 />
               </div>
             </>

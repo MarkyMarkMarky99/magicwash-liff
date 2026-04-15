@@ -1,7 +1,7 @@
 import CardSection from '../ui/CardSection';
 import OrderCard from './OrderCard';
 
-export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefresh, refreshing = false }) {
+export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefresh, refreshing = false, onViewAll }) {
   return (
     <CardSection
       title="ประวัติออเดอร์"
@@ -10,6 +10,8 @@ export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefre
       onRefresh={onRefresh}
       refreshing={refreshing}
       emptyText="ยังไม่มีออเดอร์"
+      limit={5}
+      onViewAll={onViewAll}
     >
       {orders.map((order) => (
         <OrderCard key={order.orderId} order={order} onViewPhotos={onViewPhotos} onSelectOrder={onSelectOrder} />

@@ -2,12 +2,48 @@ import { useState, useEffect, createContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLiff } from './hooks/useLiff';
 import { getCustomerByLineId, getCustomerById } from './api/customerApi';
+import { parseSheetDate } from './api/dateUtils';
 import RegisterCustomer from './pages/RegisterCustomer';
 import BookPickup from './pages/BookPickup';
 import OrderChat from './pages/OrderChat';
 import OrderGallery from './pages/OrderGallery';
 import CustomerOrders from './pages/CustomerOrders';
+import ListView from './pages/ListView';
 import LanguageSwitcher from './components/ui/LanguageSwitcher';
+import OrderCard from './components/customer-orders/OrderCard';
+import OrderDetailSheet from './components/customer-orders/OrderDetailSheet';
+
+/**
+ * Config map for the generic ListView page.
+ * URL pattern: /?list&type=<key>&<...params>
+ *
+ * To add a new list type, add an entry here — no new page file needed.
+ */
+const LIST_CONFIG = {
+  orders: {
+    title: 'ออเดอร์ทั้งหมด',
+    icon: 'receipt_long',
+    fetchFn: (params) => getCustomerById(params.get('custId')),
+    getItems: (data) => data.orders ?? [],
+    sortFn: (a, b) => (parseSheetDate(b.date) ?? 0) - (parseSheetDate(a.date) ?? 0),
+    renderItem: (order, { onOpenDetail, onOpenGallery }) => (
+      <OrderCard
+        key={order.orderId}
+        order={order}
+        onSelectOrder={onOpenDetail}
+        onViewPhotos={onOpenGallery}
+      />
+    ),
+    renderDetail: (orderId, { onClose, onOpenGallery }) => (
+      <OrderDetailSheet orderId={orderId} onClose={onClose} onViewPhotos={onOpenGallery} />
+    ),
+    renderGallery: (orderId, { onBack }) => (
+      <OrderGallery orderId={orderId} onBack={onBack} />
+    ),
+    emptyText: 'ยังไม่มีออเดอร์',
+    backUrl: (params) => `/?orders&custId=${params.get('custId')}`,
+  },
+};
 
 /** Pages use this context to set / clear the header's back button. */
 export const HeaderContext = createContext(null);
@@ -61,6 +97,30 @@ function AppShell({ children }) {
  */
 export default function App() {
   const params = new URLSearchParams(window.location.search);
+
+  // --- Generic list route: standalone, no LIFF ---
+  // URL: /?list&type=orders&custId=CUS-12345
+  if (params.has('list')) {
+    const cfg = LIST_CONFIG[params.get('type')];
+    if (cfg) {
+      return (
+        <AppShell>
+          <ListView
+            title={cfg.title}
+            icon={cfg.icon}
+            fetchFn={() => cfg.fetchFn(params)}
+            getItems={cfg.getItems}
+            sortFn={cfg.sortFn}
+            renderItem={cfg.renderItem}
+            renderDetail={cfg.renderDetail}
+            renderGallery={cfg.renderGallery}
+            emptyText={cfg.emptyText}
+            backUrl={cfg.backUrl(params)}
+          />
+        </AppShell>
+      );
+    }
+  }
 
   // --- Gallery route: standalone, no LIFF ---
   // URL: /?gallery&orderId=ORD-12345
