@@ -2,13 +2,23 @@ const ORDER_API_URL =
   'https://script.google.com/macros/s/AKfycbzCGcGxe45YoGlwc82kCqbP63ODuhMQ6fNh9Dro2bY4p57FBPRx2dUCtb5GEfuPquXZ/exec';
 
 import { lsGet, lsSet, lsGetStale } from './localCache';
+import { toISODate } from './dateUtils';
 
 const CACHE_PREFIX = 'mw_order_';
+
+const DATE_FIELDS = ['received_date', 'due_date', 'date'];
+
+function normalizeDates(json) {
+  if (json.status !== 'found' || !json.data) return json;
+  const data = { ...json.data };
+  DATE_FIELDS.forEach((f) => { if (data[f]) data[f] = toISODate(data[f]); });
+  return { ...json, data };
+}
 
 async function _fetchAndCache(url, cacheKey) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
+  const json = normalizeDates(await res.json());
   if (json.status === 'found') lsSet(cacheKey, json);
   return json;
 }

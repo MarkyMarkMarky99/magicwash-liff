@@ -1,7 +1,8 @@
-/**
- * Convert drive.google.com/thumbnail?id=XXX to lh3.googleusercontent.com/d/XXX
- * The lh3 URL is a direct CDN link that works in <img> without Google session cookies.
- */
+import { lsGet, lsSet } from './localCache';
+
+const CACHE_PREFIX = 'mw_photos_';
+const SHEET_NAME = 'LaundryPhotos';
+
 function toDirectUrl(url) {
   if (!url) return null;
   try {
@@ -14,19 +15,12 @@ function toDirectUrl(url) {
   return url;
 }
 
-const SPREADSHEET_ID = '1tfgJvjXMkH8MIoJ38No9-1DBdG7o0lcPG8dVhPCGw-E';
-const SHEET_NAME = 'LaundryPhotos';
-
 /**
- * Fetch laundry photos for a given orderId from Google Sheets via GVIZ.
+ * Fetch laundry photos for a given orderId via the /api/gviz proxy.
  * Sheet columns: B=orderId, F=image_url, G=image_label
  * @param {string} orderId
  * @returns {Promise<Array<{ imageUrl: string, label: string }>>}
  */
-import { lsGet, lsSet } from './localCache';
-
-const CACHE_PREFIX = 'mw_photos_';
-
 export async function getPhotosByOrderId(orderId) {
   const cached = lsGet(CACHE_PREFIX + orderId);
   if (cached) {
@@ -34,24 +28,17 @@ export async function getPhotosByOrderId(orderId) {
     return cached;
   }
 
-  const query = `SELECT F,G WHERE B='${orderId}'`;
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq`
-    + `?sheet=${encodeURIComponent(SHEET_NAME)}`
-    + `&tq=${encodeURIComponent(query)}`
-    + `&tqx=out:json`;
+  const tq = `SELECT F,G WHERE B='${orderId}'`;
+  const res = await fetch(
+    `/api/gviz?sheet=${encodeURIComponent(SHEET_NAME)}&tq=${encodeURIComponent(tq)}`
+  );
+  if (!res.ok) throw new Error(`photos API responded ${res.status}`);
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`GVIZ responded ${res.status}`);
-
-  const text = await res.text();
-  // Strip GVIZ callback wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
-  const json = JSON.parse(text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
-
-  const rows = json?.table?.rows ?? [];
+  const rows = await res.json();
   const photos = rows
     .map((row) => ({
-      imageUrl: toDirectUrl(row.c?.[0]?.v ?? null),
-      label:    row.c?.[1]?.v ?? '',
+      imageUrl: toDirectUrl(row.c0),
+      label: row.c1 ?? '',
     }))
     .filter((item) => item.imageUrl);
 

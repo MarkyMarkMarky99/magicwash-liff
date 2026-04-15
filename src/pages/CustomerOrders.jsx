@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { getCustomerById } from '../api/customerApi';
 import { lsClear } from '../api/localCache';
+import { parseSheetDate } from '../api/dateUtils';
 import { HeaderContext } from '../App';
 import CustomerCard from '../components/customer-orders/CustomerCard';
 import OrderList from '../components/customer-orders/OrderList';
@@ -23,8 +24,7 @@ export default function CustomerOrders({ custId }) {
 
     const applyCustomer = (res) => {
       setCustomer(res.data);
-      const parseDate = (s) => { if (!s) return 0; const p = s.split('/'); return p.length === 3 ? new Date(p[2], p[1] - 1, p[0]) : new Date(s); };
-      setOrders([...(res.data.orders ?? [])].sort((a, b) => parseDate(b.date) - parseDate(a.date)));
+      setOrders([...(res.data.orders ?? [])].sort((a, b) => (parseSheetDate(b.date) ?? 0) - (parseSheetDate(a.date) ?? 0)));
     };
 
     getCustomerById(custId, (fresh) => {
@@ -52,8 +52,10 @@ export default function CustomerOrders({ custId }) {
       if (res.status === 'found') {
         setCustomer(res.data);
         const sorted = [...(res.data.orders ?? [])].sort(
-          (a, b) => new Date(b.date) - new Date(a.date)
+          (a, b) => (parseSheetDate(b.date) ?? 0) - (parseSheetDate(a.date) ?? 0)
         );
+        // Bust per-order caches so detail sheets show fresh data
+        sorted.forEach((o) => lsClear('mw_order_' + o.orderId));
         setOrders(sorted);
         setStatus('done');
       }

@@ -8,20 +8,7 @@ const STATUS_CONFIG = {
   'รับแล้ว':   { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',     avatar: 'bg-teal-50 text-teal-700'    },
 };
 
-function parseDate(raw) {
-  if (!raw) return null;
-  // Handle DD/MM/YYYY from Google Sheets (e.g. "09/04/2026")
-  const parts = raw.split('/');
-  if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);
-  return new Date(raw);
-}
-
-function formatDate(raw) {
-  if (!raw) return '';
-  const d = parseDate(raw);
-  if (!d || isNaN(d)) return raw;
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
+import { formatDisplayDate } from '../../api/dateUtils';
 
 export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
   const cfg = STATUS_CONFIG[order.status] ?? {
@@ -46,7 +33,7 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <h3 className="font-headline font-bold text-primary text-[14px] leading-tight truncate">
-              {formatDate(order.date)}
+              {formatDisplayDate(order.date, { day: '2-digit', month: 'short', year: 'numeric' })}
             </h3>
             <span className={`inline-flex items-center px-1.5 py-px rounded-full font-label text-[9px] font-bold uppercase tracking-wide shrink-0 ${cfg.badge}`}>
               {order.status}

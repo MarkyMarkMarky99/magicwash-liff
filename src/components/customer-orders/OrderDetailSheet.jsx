@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getOrderById } from '../../api/orderApi';
-
-function fmtDate(val) {
-  if (!val) return '—';
-  const d = new Date(val);
-  return isNaN(d) ? String(val) : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
+import { formatDisplayDate } from '../../api/dateUtils';
 
 export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPhotos }) {
   const [order, setOrder]   = useState(null);
@@ -87,18 +81,18 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
             <div className="flex items-stretch gap-2">
               <div className="flex-1 bg-surface-container-low rounded-xl px-3 py-2.5">
                 <p className="font-label text-[9px] text-on-surface-variant uppercase tracking-wide mb-1">รับผ้า</p>
-                <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{fmtDate(order.received_date)}</p>
+                <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{formatDisplayDate(order.received_date)}</p>
               </div>
               <div className="flex items-center px-1">
                 <span className="material-symbols-outlined text-outline text-[16px] leading-none">arrow_forward</span>
               </div>
               <div className="flex-1 bg-surface-container-low rounded-xl px-3 py-2.5">
                 <p className="font-label text-[9px] text-on-surface-variant uppercase tracking-wide mb-1">กำหนดส่ง</p>
-                <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{fmtDate(order.due_date)}</p>
+                <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{formatDisplayDate(order.due_date)}</p>
               </div>
             </div>
             <button
-              onClick={() => onViewPhotos(orderId)}
+              onClick={() => onViewPhotos?.(orderId)}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary/15 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
             >
               <span className="material-symbols-outlined text-[16px] leading-none">photo_library</span>

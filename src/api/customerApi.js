@@ -6,13 +6,26 @@ const APPSCRIPT_URL =
  * @returns {{ status: 'found'|'not_found', data?: object }}
  */
 import { lsGet, lsSet, lsGetStale } from './localCache';
+import { toISODate } from './dateUtils';
 
 const CACHE_PREFIX = 'mw_customer_';
+
+function normalizeDates(json) {
+  if (json.status !== 'found' || !json.data) return json;
+  const data = { ...json.data };
+  if (Array.isArray(data.orders)) {
+    data.orders = data.orders.map((o) => ({
+      ...o,
+      ...(o.date ? { date: toISODate(o.date) } : {}),
+    }));
+  }
+  return { ...json, data };
+}
 
 async function _fetchAndCache(url, cacheKey) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`AppScript responded ${res.status}`);
-  const json = await res.json();
+  const json = normalizeDates(await res.json());
   if (json.status === 'found') lsSet(cacheKey, json);
   return json;
 }
