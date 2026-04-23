@@ -4,8 +4,7 @@ import { useLiff } from './hooks/useLiff';
 import { useRoute } from './hooks/useRoute';
 import { getCustomerByLineId, getCustomerById } from './api/customerApi';
 import { parseSheetDate } from './api/dateUtils';
-import RegisterCustomer from './pages/RegisterCustomer';
-import BookPickup from './pages/BookPickup';
+import RegisterCustomerV2 from './pages/RegisterCustomerV2';
 import OrderChat from './pages/OrderChat';
 import OrderGallery from './pages/OrderGallery';
 import CustomerOrders from './pages/CustomerOrders';
@@ -60,13 +59,16 @@ function AppShell({ navigate, children }) {
   const [onBack, setOnBack] = useState(null);
 
   return (
-    <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
+    <div id="app-shell" className="w-full sm:max-w-[440px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
+      <div className="absolute top-3 right-4 z-[60]">
+        <LanguageSwitcher />
+      </div>
       <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center justify-between shadow-md z-50">
         <div className="flex items-center gap-1">
           {onBack && (
             <button
               onClick={onBack}
-              className="text-on-primary -ml-1.5 mr-0.5 h-7 flex items-center px-1 hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+              className="text-on-primary -ml-1.5 mr-0.5 h-7 flex items-center px-1 hover:opacity-70 active:scale-[0.98] transition-all focus:outline-none"
             >
               <span className="material-symbols-outlined text-[22px] leading-none">arrow_back</span>
             </button>
@@ -76,7 +78,6 @@ function AppShell({ navigate, children }) {
             Magicwash Laundry
           </h1>
         </div>
-        <LanguageSwitcher />
       </header>
 
       <NavigateContext.Provider value={navigate}>
@@ -103,6 +104,22 @@ function AppShell({ navigate, children }) {
  */
 export default function App() {
   const { params, navigate } = useRoute();
+
+  // --- DEV: RegisterCustomerV2 preview ---
+  // URL: /?regv2
+  if (params.has('regv2')) {
+    return (
+      <div id="app-shell" className="w-full sm:max-w-[440px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
+        <div className="absolute top-3 right-4 z-[60]">
+          <LanguageSwitcher />
+        </div>
+        <RegisterCustomerV2
+          onRegisterSuccess={(data) => navigate(`/?orders&custId=${data.customerId}`)}
+          lineProfile={null}
+        />
+      </div>
+    );
+  }
 
   // --- Generic list route: standalone, no LIFF ---
   // URL: /?list&type=orders&custId=CUS-12345
@@ -152,76 +169,51 @@ export default function App() {
 }
 
 function AppMain() {
+  const { navigate } = useRoute();
   const liff = useLiff();
-  const [view, setView] = useState('loading'); // 'loading' | 'register' | 'booking'
-  const [customerData, setCustomerData] = useState(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (liff.status === 'loading') return;
 
+    // Legacy ?custId=xxx — redirect straight to orders page
     const custId = new URLSearchParams(window.location.search).get('custId');
+    if (custId) { navigate(`/?orders&custId=${custId}`); return; }
 
-    // --- Case A: custId in URL ---
-    if (custId) {
-      getCustomerById(custId, (fresh) => {
-        if (fresh.status === 'found') setCustomerData(fresh.data);
-      })
-        .then((res) => {
-          if (res.status === 'found') { setCustomerData(res.data); setView('booking'); }
-          else setView('register');
-        })
-        .catch(() => setView('register'));
-      return;
-    }
-
-    // --- Case B: inside LINE ---
+    // Inside LINE — try auto-login by LINE userId
     if (liff.status === 'ready') {
-      getCustomerByLineId(liff.profile.userId, (fresh) => {
-        if (fresh.status === 'found') setCustomerData(fresh.data);
-      })
+      getCustomerByLineId(liff.profile.userId)
         .then((res) => {
-          if (res.status === 'found') { setCustomerData(res.data); setView('booking'); }
-          else setView('register');
+          if (res.status === 'found') navigate(`/?orders&custId=${res.data.customerId}`);
+          else setReady(true);
         })
-        .catch(() => setView('register'));
+        .catch(() => setReady(true));
       return;
     }
 
-    // --- Case C: normal browser, no custId ---
-    if (liff.status === 'no-line') {
-      setView('register');
-    }
-  }, [liff.status, liff.profile]);
+    // Normal browser — show register/login gate
+    if (liff.status === 'no-line') setReady(true);
+  }, [liff.status]);
 
-  const handleRegisterSuccess = (data) => {
-    setCustomerData(data);
-    setView('booking');
-  };
-
-  // Dev preview: ?dev=chat — OrderChat has its own ChatHeader, keep standalone container
+  // Dev preview: ?dev=chat
   const devParam = new URLSearchParams(window.location.search).get('dev');
-  const dummyUser = { customerName: 'บุสรินทร์ หอมวิเชียร (โบ)', customerId: 'CUS-88291', phone: '081-234-5678', address: '123 ถนนสุขุมวิท, กรุงเทพฯ' };
   if (devParam === 'chat') {
+    const dummyUser = { customerName: 'บุสรินทร์ หอมวิเชียร (โบ)', customerId: 'CUS-88291', phone: '081-234-5678', address: '123 ถนนสุขุมวิท, กรุงเทพฯ' };
     return (
-      <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
+      <div className="w-full sm:max-w-[440px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
         <OrderChat userData={dummyUser} appointmentDate="2026-04-05" appointmentTime="10:00 - 12:00 น." />
       </div>
     );
   }
 
-  if (view === 'loading' || liff.status === 'loading') {
-    return <SplashScreen />;
-  }
+  if (!ready || liff.status === 'loading') return <SplashScreen />;
 
   return (
-    <AppShell>
-      {view === 'booking'
-        ? <BookPickup userData={customerData} />
-        : <RegisterCustomer
-            lineProfile={liff.profile}
-            onRegisterSuccess={handleRegisterSuccess}
-          />
-      }
+    <AppShell navigate={navigate}>
+      <RegisterCustomerV2
+        lineProfile={liff.profile}
+        onRegisterSuccess={(data) => navigate(`/?orders&custId=${data.customerId}`)}
+      />
     </AppShell>
   );
 }
@@ -229,7 +221,7 @@ function AppMain() {
 function SplashScreen() {
   const { t } = useTranslation();
   return (
-    <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col items-center justify-center gap-4">
+    <div className="w-full sm:max-w-[440px] mx-auto bg-surface h-dvh flex flex-col items-center justify-center gap-4">
       <span className="material-symbols-outlined text-primary text-[56px] animate-pulse">local_laundry_service</span>
       <p className="font-body text-on-surface-variant text-sm">{t('loading')}</p>
     </div>

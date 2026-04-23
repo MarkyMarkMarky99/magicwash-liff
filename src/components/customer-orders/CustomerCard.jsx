@@ -6,7 +6,7 @@ export default function CustomerCard({ customer }) {
   return (
     <div className="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-outline-variant/30">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0 overflow-hidden">
           <span className="material-symbols-outlined fill-icon text-[48px] text-outline-variant translate-y-1">
             account_circle
           </span>

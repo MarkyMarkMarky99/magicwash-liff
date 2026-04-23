@@ -36,7 +36,7 @@ function GalleryImage({ src, alt, delay }) {
 
   if (imgState === 'error') {
     return (
-      <div className="w-full h-full bg-surface-variant flex items-center justify-center">
+      <div className="w-full h-full bg-surface-container-low flex items-center justify-center">
         <span className="material-symbols-outlined text-on-surface-variant text-[22px]">close</span>
       </div>
     );
@@ -44,7 +44,7 @@ function GalleryImage({ src, alt, delay }) {
 
   if (imgState === 'loading') {
     return (
-      <div className="w-full h-full bg-surface-variant flex items-center justify-center">
+      <div className="w-full h-full bg-surface-container-low flex items-center justify-center">
         <span className="material-symbols-outlined text-on-surface-variant text-[22px] animate-spin">progress_activity</span>
       </div>
     );
@@ -76,7 +76,7 @@ export default function OrderGallery({ orderId, onBack }) {
 
   // Photo grid / state screens — shared between embedded and standalone
   const body = (
-    <div className="p-4 flex flex-col min-h-full">
+    <div className="py-2 px-px flex flex-col min-h-full">
       {status === 'loading' && (
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <span className="material-symbols-outlined text-primary text-5xl animate-pulse">local_laundry_service</span>
@@ -101,12 +101,12 @@ export default function OrderGallery({ orderId, onBack }) {
       )}
 
       {status === 'done' && (
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-3 gap-px">
           {photos.map((photo, i) => (
             <button
               key={i}
               onClick={() => setLightbox(i)}
-              className="rounded-lg overflow-hidden bg-surface-variant aspect-square focus:outline-none focus:ring-2 focus:ring-primary"
+              className="rounded overflow-hidden bg-surface-container-low aspect-square focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <GalleryImage
                 src={`${photo.imageUrl}=s200`}
@@ -126,7 +126,7 @@ export default function OrderGallery({ orderId, onBack }) {
       className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
       onClick={() => setLightbox(null)}
     >
-      <button className="absolute top-4 right-4 text-white" onClick={() => setLightbox(null)}>
+      <button className="absolute top-4 right-4 text-inverse-on-surface" onClick={() => setLightbox(null)}>
         <span className="material-symbols-outlined text-3xl">close</span>
       </button>
 
@@ -138,24 +138,24 @@ export default function OrderGallery({ orderId, onBack }) {
       />
 
       {photos[lightbox].label && (
-        <p className="mt-3 text-white/80 font-body text-sm text-center">{photos[lightbox].label}</p>
+        <p className="mt-3 text-inverse-on-surface/80 font-body text-sm text-center">{photos[lightbox].label}</p>
       )}
 
       <div className="flex gap-6 mt-4">
         <button
           disabled={lightbox === 0}
           onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1); }}
-          className="text-white disabled:opacity-30"
+          className="text-inverse-on-surface disabled:opacity-30"
         >
           <span className="material-symbols-outlined text-3xl">chevron_left</span>
         </button>
-        <span className="text-white/60 font-body text-sm self-center">
+        <span className="text-inverse-on-surface/60 font-body text-sm self-center">
           {lightbox + 1} / {photos.length}
         </span>
         <button
           disabled={lightbox === photos.length - 1}
           onClick={(e) => { e.stopPropagation(); setLightbox(lightbox + 1); }}
-          className="text-white disabled:opacity-30"
+          className="text-inverse-on-surface disabled:opacity-30"
         >
           <span className="material-symbols-outlined text-3xl">chevron_right</span>
         </button>

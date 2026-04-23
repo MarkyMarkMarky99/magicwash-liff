@@ -38,7 +38,7 @@ export default function ChatInput({ inputText, imageFile, placeholder, onChange,
           className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm ${
             imageFile
               ? 'bg-surface-container-high text-outline-variant opacity-40 cursor-not-allowed'
-              : 'bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high active:scale-90'
+              : 'bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high active:scale-[0.98]'
           }`}
         >
           <span className="material-symbols-outlined text-[22px]">add_photo_alternate</span>
@@ -61,7 +61,7 @@ export default function ChatInput({ inputText, imageFile, placeholder, onChange,
         <button
           onClick={onSend}
           disabled={!inputText.trim() && !imageFile}
-          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 shadow-sm ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-[0.98] shadow-sm ${
             inputText.trim() || imageFile
               ? 'bg-primary hover:brightness-110 shadow-[0_2px_8px_rgba(0,79,69,0.3)]'
               : 'bg-surface-container text-outline-variant'

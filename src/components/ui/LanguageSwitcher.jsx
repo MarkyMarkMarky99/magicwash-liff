@@ -4,20 +4,27 @@ export default function LanguageSwitcher() {
   const { i18n } = useTranslation();
   const isEN = i18n.language === 'en';
 
-  const toggle = () => {
-    const next = isEN ? 'th' : 'en';
-    i18n.changeLanguage(next);
-    localStorage.setItem('lang', next);
+  const setLang = (lang) => {
+    i18n.changeLanguage(lang);
+    localStorage.setItem('lang', lang);
   };
 
   return (
-    <button
-      onClick={toggle}
-      className="flex items-center gap-1 bg-on-primary/20 hover:bg-on-primary/30 rounded-full px-2.5 py-1 transition-colors"
-      aria-label="Toggle language"
-    >
-      <span className="material-symbols-outlined text-on-primary text-[14px]">translate</span>
-      <span className="font-label text-[11px] font-bold text-on-primary">{isEN ? 'EN' : 'TH'}</span>
-    </button>
+    <div className="flex bg-white/20 backdrop-blur-md rounded-full p-0.5 border border-white/30 shadow-md">
+      <button
+        onClick={() => setLang('en')}
+        className={`w-6 h-6 rounded-full text-xs font-bold font-label transition-all duration-200 ${isEN ? 'bg-white/90 text-primary shadow-sm' : 'text-white/70 hover:text-white'
+          }`}
+      >
+        EN
+      </button>
+      <button
+        onClick={() => setLang('th')}
+        className={`w-6 h-6 rounded-full text-xs font-bold font-label transition-all duration-200 ${!isEN ? 'bg-white/90 text-primary shadow-sm' : 'text-white/70 hover:text-white'
+          }`}
+      >
+        TH
+      </button>
+    </div>
   );
 }

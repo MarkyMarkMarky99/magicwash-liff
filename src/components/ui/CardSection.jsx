@@ -51,7 +51,7 @@ export default function CardSection({
   );
 
   return (
-    <section className="bg-white w-full">
+    <section className="bg-surface-container-lowest w-full">
 
       {/* Header */}
       <div
@@ -60,12 +60,12 @@ export default function CardSection({
       >
         <div className="flex items-center gap-2.5">
           <span className="material-symbols-outlined text-primary text-[16px]">{icon}</span>
-          <h2 className="font-headline font-bold text-[13px] tracking-tight">{title}</h2>
+          <h2 className="type-section-header">{title}</h2>
         </div>
         <div className="flex items-center gap-2">
           {count != null && (
             <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 h-[22px]">
-              <span className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
+              <span className="type-overline text-on-surface-variant">
                 {count} orders
               </span>
             </div>
@@ -75,7 +75,7 @@ export default function CardSection({
               onClick={(e) => { e.stopPropagation(); onRefresh(); }}
               disabled={refreshing}
               className="h-[22px] w-[22px] flex items-center justify-center rounded-full
-                         hover:bg-surface-container active:scale-95 transition-all disabled:opacity-50"
+                         hover:bg-surface-container active:scale-[0.98] transition-all disabled:opacity-50"
             >
               <span className={`material-symbols-outlined text-primary text-[16px] ${refreshing ? 'animate-spin' : ''}`}>
                 refresh

@@ -1,6 +1,8 @@
 const APPSCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbzaibTaFzSS7Wqt7z04MEJxRVlvka9teyyVge3VNkEA5xNRUYtWIMwS1FTUHu0LxpIx/exec';
 
+const CUSTOMER_API_URL = '/api/customer';
+
 /**
  * Look up a customer by their customer ID (UUID).
  * @returns {{ status: 'found'|'not_found', data?: object }}
@@ -43,14 +45,14 @@ export async function getCustomerById(customerId, onRevalidate) {
 
   if (value) {
     if (isStale) {
-      const url = `${APPSCRIPT_URL}?customerId=${encodeURIComponent(customerId)}`;
+      const url = `${CUSTOMER_API_URL}?customerId=${encodeURIComponent(customerId)}`;
       const fresh = _fetchAndCache(url, cacheKey);
       if (onRevalidate) fresh.then(onRevalidate).catch(() => {});
     }
     return value;
   }
 
-  const url = `${APPSCRIPT_URL}?customerId=${encodeURIComponent(customerId)}`;
+  const url = `${CUSTOMER_API_URL}?customerId=${encodeURIComponent(customerId)}`;
   return _fetchAndCache(url, cacheKey);
 }
 
@@ -67,14 +69,14 @@ export async function getCustomerByLineId(lineUserId, onRevalidate) {
 
   if (value) {
     if (isStale) {
-      const url = `${APPSCRIPT_URL}?lineUserId=${encodeURIComponent(lineUserId)}`;
+      const url = `${CUSTOMER_API_URL}?lineUserId=${encodeURIComponent(lineUserId)}`;
       const fresh = _fetchAndCache(url, cacheKey);
       if (onRevalidate) fresh.then(onRevalidate).catch(() => {});
     }
     return value;
   }
 
-  const url = `${APPSCRIPT_URL}?lineUserId=${encodeURIComponent(lineUserId)}`;
+  const url = `${CUSTOMER_API_URL}?lineUserId=${encodeURIComponent(lineUserId)}`;
   return _fetchAndCache(url, cacheKey);
 }
 
@@ -97,6 +99,21 @@ export async function registerCustomer({ firstName, lastName, phone, address, em
   });
   if (!res.ok) throw new Error(`AppScript responded ${res.status}`);
   return res.json();
+}
+
+/**
+ * Authenticate a customer by phone/email + password.
+ * Password validation is performed server-side.
+ * @returns {{ status: 'success'|'not_found'|'invalid_password', data?: object }}
+ */
+export async function loginCustomer(identifier, password) {
+  const res = await fetch(CUSTOMER_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password }),
+  });
+  if (!res.ok) throw new Error(`Customer API responded ${res.status}`);
+  return normalizeDates(await res.json());
 }
 
 /**

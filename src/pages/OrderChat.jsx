@@ -87,7 +87,7 @@ function FinalSummaryContent({ answers, date, time, isTh }) {
       </div>
       {/* Booking info */}
       <div className="bg-surface-container-high rounded-lg px-2.5 py-2 mb-2 border-l-[3px] border-primary">
-        <p className="font-label text-[9px] text-primary font-semibold uppercase tracking-wide mb-0.5">
+        <p className="type-overline text-primary mb-0.5">
           {isTh ? 'การจอง' : 'Appointment'}
         </p>
         <p className="font-headline font-bold text-sm text-on-surface leading-tight">{date}</p>
@@ -120,7 +120,7 @@ function BookingConfirmContent({ date, time, isTh }) {
         {isTh ? 'จองรับผ้าเรียบร้อยแล้วครับ' : 'Pickup booking confirmed!'}
       </p>
       <div className="bg-surface-container-high rounded-lg px-2.5 py-2 mb-2 border-l-[3px] border-primary">
-        <p className="font-label text-[9px] text-primary font-semibold uppercase tracking-wide mb-0.5">
+        <p className="type-overline text-primary mb-0.5">
           {isTh ? 'การจองใหม่' : 'New Booking'}
         </p>
         <p className="font-headline font-bold text-sm text-on-surface leading-tight">{date}</p>

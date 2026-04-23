@@ -54,8 +54,8 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
         {/* Header */}
         <div className="flex items-start justify-between px-4 pt-1 pb-3 flex-none border-b border-outline-variant/20">
           <div>
-            <p className="font-label text-[9px] text-on-surface-variant uppercase tracking-widest mb-0.5">รายละเอียดออเดอร์</p>
-            <h2 className="font-headline font-bold text-[15px] text-on-surface leading-tight">{orderId}</h2>
+            <p className="type-overline text-on-surface-variant mb-0.5">รายละเอียดออเดอร์</p>
+            <h2 className="type-btn text-on-surface leading-tight">{orderId}</h2>
           </div>
           {status === 'done' && order && (
             <div className="flex flex-col items-end gap-1 pt-0.5">
@@ -80,14 +80,14 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
           <div className="px-4 pt-3 pb-2 flex-none space-y-3">
             <div className="flex items-stretch gap-2">
               <div className="flex-1 bg-surface-container-low rounded-xl px-3 py-2.5">
-                <p className="font-label text-[9px] text-on-surface-variant uppercase tracking-wide mb-1">รับผ้า</p>
+                <p className="type-overline text-on-surface-variant mb-1">รับผ้า</p>
                 <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{formatDisplayDate(order.received_date)}</p>
               </div>
               <div className="flex items-center px-1">
                 <span className="material-symbols-outlined text-outline text-[16px] leading-none">arrow_forward</span>
               </div>
               <div className="flex-1 bg-surface-container-low rounded-xl px-3 py-2.5">
-                <p className="font-label text-[9px] text-on-surface-variant uppercase tracking-wide mb-1">กำหนดส่ง</p>
+                <p className="type-overline text-on-surface-variant mb-1">กำหนดส่ง</p>
                 <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{formatDisplayDate(order.due_date)}</p>
               </div>
             </div>

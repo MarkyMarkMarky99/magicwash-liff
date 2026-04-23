@@ -1,5 +1,4 @@
-const ORDER_API_URL =
-  'https://script.google.com/macros/s/AKfycbzCGcGxe45YoGlwc82kCqbP63ODuhMQ6fNh9Dro2bY4p57FBPRx2dUCtb5GEfuPquXZ/exec';
+const ORDER_API_URL = '/api/order';
 
 import { lsGet, lsSet, lsGetStale } from './localCache';
 import { toISODate } from './dateUtils';

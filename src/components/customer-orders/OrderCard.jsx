@@ -1,11 +1,11 @@
 const STATUS_CONFIG = {
   // Real statuses from OrderForm sheet
-  'SUBMITTED': { icon: 'local_laundry_service', badge: 'bg-amber-100 text-amber-700', avatar: 'bg-amber-50 text-amber-600' },
-  'CONFIRM':   { icon: 'check_circle',          badge: 'bg-green-100 text-green-700', avatar: 'bg-green-50 text-green-700' },
+  'SUBMITTED': { icon: 'local_laundry_service', badge: 'bg-surface-container text-on-surface-variant',     avatar: 'bg-surface-container text-on-surface-variant'     },
+  'CONFIRM':   { icon: 'check_circle',          badge: 'bg-primary-container text-on-primary-container',   avatar: 'bg-primary-container text-on-primary-container'   },
   // Backward-compatible Thai labels (mock data)
-  'เสร็จแล้ว': { icon: 'check_circle',         badge: 'bg-green-100 text-green-700',  avatar: 'bg-green-50 text-green-700'  },
-  'กำลังซัก':  { icon: 'local_laundry_service', badge: 'bg-amber-100 text-amber-700',  avatar: 'bg-amber-50 text-amber-600'  },
-  'รับแล้ว':   { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',     avatar: 'bg-teal-50 text-teal-700'    },
+  'เสร็จแล้ว': { icon: 'check_circle',         badge: 'bg-primary-container text-on-primary-container',   avatar: 'bg-primary-container text-on-primary-container'   },
+  'กำลังซัก':  { icon: 'local_laundry_service', badge: 'bg-secondary-container text-on-secondary-container', avatar: 'bg-secondary-container text-on-secondary-container' },
+  'รับแล้ว':   { icon: 'inventory_2',           badge: 'bg-secondary-container text-on-secondary-container', avatar: 'bg-secondary-container text-on-secondary-container' },
 };
 
 import { formatDisplayDate } from '../../api/dateUtils';
@@ -13,8 +13,8 @@ import { formatDisplayDate } from '../../api/dateUtils';
 export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
   const cfg = STATUS_CONFIG[order.status] ?? {
     icon: 'receipt_long',
-    badge: 'bg-gray-100 text-gray-600',
-    avatar: 'bg-gray-100 text-gray-500',
+    badge: 'bg-surface-container text-on-surface-variant',
+    avatar: 'bg-surface-container text-on-surface-variant',
   };
 
   return (
@@ -51,7 +51,7 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
           </p>
           <button
             onClick={(e) => { e.stopPropagation(); onViewPhotos?.(order.orderId); }}
-            className="shrink-0 text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+            className="shrink-0 text-primary hover:opacity-70 active:scale-[0.98] transition-all focus:outline-none"
           >
             <span className="material-symbols-outlined text-[14px]">photo_library</span>
           </button>

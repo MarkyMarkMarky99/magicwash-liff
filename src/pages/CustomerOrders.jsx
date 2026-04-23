@@ -1,23 +1,27 @@
 import { useState, useEffect, useContext, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getCustomerById } from '../api/customerApi';
 import { lsClear } from '../api/localCache';
 import { parseSheetDate } from '../api/dateUtils';
 import { HeaderContext, NavigateContext } from '../App';
+import BookingSheet from '../components/ui/BookingSheet';
 import CustomerCard from '../components/customer-orders/CustomerCard';
 import OrderList from '../components/customer-orders/OrderList';
 import OrderDetailSheet from '../components/customer-orders/OrderDetailSheet';
 import OrderGallery from './OrderGallery';
 
 export default function CustomerOrders({ custId }) {
-  const [customer, setCustomer]             = useState(null);
-  const [orders, setOrders]                 = useState([]);
-  const [status, setStatus]                 = useState('loading');
-  const [refreshing, setRefreshing]         = useState(false);
-  const [galleryOrderId, setGalleryOrderId] = useState(null);
+  const { t } = useTranslation();
+  const [customer, setCustomer]               = useState(null);
+  const [orders, setOrders]                   = useState([]);
+  const [status, setStatus]                   = useState('loading');
+  const [refreshing, setRefreshing]           = useState(false);
+  const [galleryOrderId, setGalleryOrderId]   = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const [sheetTop, setSheetTop]             = useState(null);
-  const setOnBack   = useContext(HeaderContext);
-  const navigate    = useContext(NavigateContext);
+  const [sheetTop, setSheetTop]               = useState(null);
+  const [bookingOpen, setBookingOpen]         = useState(false);
+  const setOnBack      = useContext(HeaderContext);
+  const navigate       = useContext(NavigateContext);
   const cardSectionRef = useRef(null);
 
   useEffect(() => {
@@ -38,8 +42,7 @@ export default function CustomerOrders({ custId }) {
       .catch(() => setStatus('error'));
   }, [custId]);
 
-  // Sync back button in the shared header whenever gallery view toggles.
-  // Double-wrap the function so React stores it as a value, not a functional updater.
+  // Double-wrap so React stores it as a value, not a functional updater.
   useEffect(() => {
     setOnBack(galleryOrderId ? () => () => setGalleryOrderId(null) : null);
   }, [galleryOrderId]);
@@ -55,7 +58,6 @@ export default function CustomerOrders({ custId }) {
         const sorted = [...(res.data.orders ?? [])].sort(
           (a, b) => (parseSheetDate(b.date) ?? 0) - (parseSheetDate(a.date) ?? 0)
         );
-        // Bust per-order caches so detail sheets show fresh data
         sorted.forEach((o) => lsClear('mw_order_' + o.orderId));
         setOrders(sorted);
         setStatus('done');
@@ -65,8 +67,6 @@ export default function CustomerOrders({ custId }) {
   }, [custId, refreshing]);
 
   const handleSelectOrder = (orderId) => {
-    // offsetTop + offsetHeight gives layout position relative to the positioned wrapper,
-    // unaffected by how far the user has scrolled inside the inner scrollable div.
     if (cardSectionRef.current) {
       setSheetTop(cardSectionRef.current.offsetTop + cardSectionRef.current.offsetHeight);
     } else {
@@ -80,12 +80,17 @@ export default function CustomerOrders({ custId }) {
     setGalleryOrderId(orderId);
   };
 
-  return (
-    <div
-      className="flex-1 min-h-0 flex flex-col relative overflow-hidden font-body text-on-surface w-full"
-    >
+  const bookingCustomer = customer ? {
+    customerId:   customer.customerId,
+    address:      customer.address,
+    phone:        customer.phone,
+    customerName: customer.customerName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
+  } : null;
 
-      {/* Gallery view — embedded, no own header */}
+  return (
+    <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden font-body text-on-surface w-full">
+
+      {/* Gallery view */}
       {galleryOrderId && (
         <div className="flex-1 overflow-y-auto no-scrollbar">
           <OrderGallery orderId={galleryOrderId} onBack={() => setGalleryOrderId(null)} />
@@ -114,8 +119,15 @@ export default function CustomerOrders({ custId }) {
 
           {status === 'done' && (
             <>
-              <div ref={cardSectionRef} className="px-4 pt-4 pb-3">
+              <div ref={cardSectionRef} className="px-4 pt-4 pb-3 space-y-3">
                 <CustomerCard customer={customer} />
+                <button
+                  onClick={() => setBookingOpen(true)}
+                  className="w-full py-3 rounded-xl flex items-center justify-center gap-2 bg-primary text-on-primary font-headline font-bold text-[15px] shadow-sm hover:brightness-110 active:scale-[0.98] transition-all"
+                >
+                  <span className="material-symbols-outlined text-[20px]">calendar_month</span>
+                  {t('booking.bookAppointment')}
+                </button>
               </div>
               <div className="flex-1">
                 <OrderList
@@ -133,7 +145,7 @@ export default function CustomerOrders({ custId }) {
         </div>
       )}
 
-      {/* Order detail bottom sheet */}
+      {/* Order detail sheet */}
       {selectedOrderId && !galleryOrderId && (
         <OrderDetailSheet
           orderId={selectedOrderId}
@@ -142,6 +154,13 @@ export default function CustomerOrders({ custId }) {
           onViewPhotos={handleViewPhotosFromSheet}
         />
       )}
+
+      {/* Book Appointment sheet */}
+      <BookingSheet
+        isOpen={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        customer={bookingCustomer}
+      />
 
     </div>
   );

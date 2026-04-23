@@ -42,6 +42,6 @@ export async function getPhotosByOrderId(orderId) {
     }))
     .filter((item) => item.imageUrl);
 
-  lsSet(CACHE_PREFIX + orderId, photos);
+  if (photos.length > 0) lsSet(CACHE_PREFIX + orderId, photos);
   return photos;
 }

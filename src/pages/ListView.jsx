@@ -100,9 +100,9 @@ export default function ListView({
               {/* Header bar */}
               <div className="px-4 py-2 bg-surface-container-low flex items-center gap-2.5 shrink-0">
                 <span className="material-symbols-outlined text-primary text-[16px]">{icon}</span>
-                <h2 className="font-headline font-bold text-[13px] tracking-tight text-primary">{title}</h2>
+                <h2 className="type-section-header text-primary">{title}</h2>
                 <div className="ml-auto flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 h-[22px]">
-                  <span className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
+                  <span className="type-overline text-on-surface-variant">
                     {items.length} รายการ
                   </span>
                 </div>
@@ -111,7 +111,7 @@ export default function ListView({
               {items.length === 0 ? (
                 <p className="px-6 py-4 text-sm text-on-surface-variant italic">{emptyText}</p>
               ) : (
-                <div className="divide-y divide-outline-variant/10 bg-white">
+                <div className="divide-y divide-outline-variant/10 bg-surface-container-lowest">
                   {items.map((item, i) =>
                     renderItem(item, {
                       onOpenDetail: setDetailId,

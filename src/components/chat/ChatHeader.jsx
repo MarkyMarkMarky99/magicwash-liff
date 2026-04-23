@@ -43,7 +43,7 @@ export default function ChatHeader({ displayName, customerId, isTh, onClose, onM
       <div ref={menuRef} className="relative">
         <button
           onClick={() => setMenuOpen(v => !v)}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-on-primary/80 hover:bg-on-primary/10 active:scale-90 transition-all"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-on-primary/80 hover:bg-on-primary/10 active:scale-[0.98] transition-all"
         >
           <span className="material-symbols-outlined text-[20px]">more_vert</span>
         </button>
@@ -69,7 +69,7 @@ export default function ChatHeader({ displayName, customerId, isTh, onClose, onM
       {onClose && (
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-on-primary/80 hover:bg-on-primary/10 active:scale-90 transition-all"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-on-primary/80 hover:bg-on-primary/10 active:scale-[0.98] transition-all"
         >
           <span className="material-symbols-outlined text-[20px]">close</span>
         </button>
