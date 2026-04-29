@@ -44,13 +44,25 @@ export function registerCustomer({ firstName, lastName, phone, address, email, l
   });
 }
 
-export function linkLineId(customerId, lineId) {
-  return apiPost('customer', {
+export function updateCustomer(customerId, fields = {}) {
+  const customerName = `${fields.firstName ?? ''} ${fields.lastName ?? ''}`.trim();
+  const payload = {
     action: 'UPDATE',
     customerId,
-    lineId,
     updatedBy: 'liff',
-  });
+  };
+
+  if (customerName) payload.customerName = customerName;
+  if (fields.phone?.trim()) payload.phone = fields.phone.trim();
+  if (fields.address?.trim()) payload.address = fields.address.trim();
+  if (fields.email?.trim()) payload.email = fields.email.trim();
+  if (fields.lineId?.trim()) payload.lineId = fields.lineId.trim();
+
+  return apiPost('customer', payload);
+}
+
+export function linkLineId(customerId, lineId, fields = {}) {
+  return updateCustomer(customerId, { ...fields, lineId });
 }
 
 export function createAppointment({ customerId, appointmentDate, timeSlot, address, notes, type = 'pickup', orderId }) {

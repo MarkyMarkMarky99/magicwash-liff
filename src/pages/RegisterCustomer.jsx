@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { registerCustomer, linkLineId } from '../api/customerApi';
+import { registerCustomer, updateCustomer } from '../api/customerApi';
 import PageLayout from '../components/layout/PageLayout';
 import RegisterSuccessModal from '../components/register/RegisterSuccessModal';
 
@@ -44,13 +44,13 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
           return;
         }
 
-        // Phone exists but no LINE account linked yet — silently link and proceed
-        const linkRes = await linkLineId(res.existingCustomerId, formData.lineId);
-        if (linkRes.status === 'success') {
+        // Only LIFF users can enrich an existing record while linking their LINE account.
+        const updateRes = await updateCustomer(res.existingCustomerId, formData);
+        if (updateRes.status === 'success') {
           setRegisteredData({ ...formData, customerId: res.existingCustomerId, label: res.existingCustomerId });
           setShowSuccessModal(true);
         } else {
-          setApiError(linkRes.message || 'Failed to link LINE account');
+          setApiError(updateRes.message || 'Failed to update customer profile');
         }
       } else {
         setApiError(res.message || 'Registration failed');
