@@ -1,48 +1,52 @@
 /**
  * Vercel Serverless Function — Generic GViz proxy
  *
- * Hides GVIZ_SPREADSHEET_ID server-side; clients pass sheet + tq only.
+ * Hides spreadsheet IDs server-side. Clients pass source + tq only.
+ * source maps to { sheetName, spreadsheetId, columns[] } via SOURCE_MAP.
+ * Responses are named-key objects, not positional c0/c1/... keys.
  *
  * Query params:
- *   sheet  - sheet name (e.g. "LaundryPhotos")
- *   tq     - GViz SQL query (e.g. "SELECT F,G WHERE B='ORD-001'")
+ *   source - source key (e.g. "customers", "ordersView", "laundryPhotos")
+ *   tq     - GViz SQL query  (e.g. "SELECT * WHERE B='CUS-001'")
+ *   cols   - optional comma-separated camelCase column names to include
+ *            (e.g. "orderId,status,dueDate"). Omit to return all columns.
  *
- * Returns: JSON array of row objects, one key per selected column (c0, c1, ...)
- *   e.g. [{ c0: "https://...", c1: "label" }, ...]
+ * Returns: JSON array of row objects with camelCase field names
+ *   e.g. [{ customerId: "CUS-001", customerName: "...", ... }]
  */
+import { SOURCE_MAP, fetchGvizMapped } from './_gviz.js';
+
 export default async function handler(req, res) {
-  const { sheet, tq } = req.query;
+  const { source, tq, cols } = req.query;
 
-  if (!sheet || !tq) {
-    return res.status(400).json({ error: 'sheet and tq are required' });
+  if (!source || !tq) {
+    return res.status(400).json({ error: 'source and tq are required' });
   }
 
-  const spreadsheetId = process.env.GVIZ_SPREADSHEET_ID;
-  if (!spreadsheetId) {
-    return res.status(500).json({ error: 'GVIZ_SPREADSHEET_ID not configured' });
-  }
-
-  const url =
-    `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq` +
-    `?sheet=${encodeURIComponent(sheet)}` +
-    `&tq=${encodeURIComponent(tq)}` +
-    `&tqx=out:json`;
-
-  const gvizRes = await fetch(url);
-  if (!gvizRes.ok) {
-    return res.status(502).json({ error: `GViz responded ${gvizRes.status}` });
-  }
-
-  const text = await gvizRes.text();
-  const json = JSON.parse(text.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
-
-  const rows = (json?.table?.rows ?? []).map((row) => {
-    const obj = {};
-    (row.c ?? []).forEach((cell, i) => {
-      obj[`c${i}`] = cell?.v ?? null;
+  if (!(source in SOURCE_MAP)) {
+    return res.status(400).json({
+      error: `Unknown source "${source}". Known: ${Object.keys(SOURCE_MAP).join(', ')}`,
     });
-    return obj;
-  });
+  }
 
-  res.status(200).json(rows);
+  let selectCols = null;
+  if (cols) {
+    const knownCols = new Set(SOURCE_MAP[source].columns);
+    selectCols = cols.split(',').map((c) => c.trim()).filter(Boolean);
+    const unknown = selectCols.filter((c) => !knownCols.has(c));
+    if (unknown.length) {
+      return res.status(400).json({
+        error: `Unknown columns for "${source}": ${unknown.join(', ')}. Known: ${[...knownCols].join(', ')}`,
+      });
+    }
+  }
+
+  const { rows, error } = await fetchGvizMapped(source, tq);
+  if (error) return res.status(502).json({ error });
+
+  const result = selectCols
+    ? rows.map((row) => Object.fromEntries(selectCols.map((c) => [c, row[c] ?? null])))
+    : rows;
+
+  res.status(200).json(result);
 }

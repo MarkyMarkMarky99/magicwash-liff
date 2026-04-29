@@ -20,6 +20,9 @@
     "notes": "หมายเหตุ",
     "optional": "(ไม่บังคับ)",
     "notesPlaceholder": "คำแนะนำพิเศษสำหรับการรับผ้า…",
+    "typeLabel": "ประเภทการจอง",
+    "typePickup": "รับผ้า",
+    "typeDelivery": "ส่งผ้า",
     "booking": "กำลังจอง…",
     "confirm": "ยืนยันการจอง"
   },
@@ -30,6 +33,14 @@
     "date": "วันที่",
     "time": "เวลา",
     "done": "เสร็จสิ้น"
+  },
+  "confirmBooking": {
+    "subtitle": "เราจะมารับผ้าของคุณตามนัด",
+    "appointmentDetails": "รายละเอียดนัดหมาย",
+    "timeAndDate": "วันและเวลา",
+    "location": "สถานที่",
+    "notes": "หมายเหตุ",
+    "mapYou": "คุณ"
   },
   "registerSuccess": {
     "line1": "ลงทะเบียน",
@@ -42,5 +53,86 @@
     "phone": "โทร",
     "address": "ที่อยู่",
     "email": "อีเมล"
+  },
+  "customerOrders": {
+    "customerNo": "หมายเลขลูกค้า",
+    "type": "ประเภทลูกค้า",
+    "schedulePickup": "นัดรับผ้า",
+    "orderDetails": "รายละเอียดออเดอร์",
+    "viewPhotos": "ดูรูปภาพทั้งหมด",
+    "loadError": "โหลดข้อมูลไม่สำเร็จ",
+    "items": "รายการ",
+    "orderHistory": "ประวัติออเดอร์",
+    "ordersCount": "{{count}} ออเดอร์",
+    "empty": "ยังไม่มีออเดอร์"
+  },
+  "activeOrder": {
+    "pageTitle": "ออเดอร์ปัจจุบัน",
+    "orderNumber": "เลขออเดอร์",
+    "issuedDate": "วันที่รับ",
+    "receivedDate": "รับผ้า",
+    "dueDate": "กำหนดส่ง",
+    "serviceType": "ประเภท",
+    "tracking": {
+      "pickup": "รับผ้า",
+      "delivery": "ส่งคืน",
+      "awaiting": "รอกำหนดนัด"
+    },
+    "customer": {
+      "title": "ข้อมูลลูกค้า",
+      "details": "ข้อมูลลูกค้า"
+    },
+    "quantity": "จำนวน",
+    "pieces": "ชิ้น",
+    "tracker": {
+      "title": "สถานะออเดอร์",
+      "pending": "รอดำเนินการ",
+      "received": "รับผ้าแล้ว",
+      "inProgress": "กำลังซัก",
+      "ready": "พร้อมส่ง",
+      "completed": "ส่งคืนเรียบร้อย"
+    },
+    "items": {
+      "title": "รายการผ้า",
+      "perUnit": "ต่อชิ้น",
+      "count": "รายการ",
+      "empty": "ยังไม่มีรายการ"
+    },
+    "cost": {
+      "title": "สรุปค่าใช้จ่าย",
+      "subtotal": "ยอดรวม",
+      "tax": "VAT 7%",
+      "total": "ยอดชำระทั้งหมด",
+      "voucherPlaceholder": "รหัสคูปอง",
+      "applyVoucher": "ใช้",
+      "invalidVoucher": "รหัสไม่ถูกต้อง",
+      "service": {
+        "express": {
+          "label": "ด่วน",
+          "desc": "รับผ้าก่อน 14:00 น. คืนผ้าวันเดียวกัน บวกเพิ่ม 100%"
+        },
+        "regular": {
+          "label": "ปกติ",
+          "desc": "รับผ้า 10:00–14:00 น. คืนผ้าวันถัดไปหลัง 14:00 น. บวกเพิ่ม 50%"
+        },
+        "saver": {
+          "label": "ประหยัด",
+          "desc": "รับผ้าได้หลังจาก 72 ชั่วโมง"
+        }
+      }
+    },
+    "payment": {
+      "payNow": "ชำระเงิน",
+      "paid": "ชำระเงินแล้ว",
+      "paidOn": "ชำระเมื่อ",
+      "unpaidHint": "กรุณาชำระเงินเพื่อนัดส่งผ้าคืน"
+    },
+    "delivery": {
+      "schedule": "นัดส่งผ้าคืน",
+      "scheduled": "นัดส่งผ้าคืนแล้ว",
+      "locked": "กรุณาชำระเงินก่อน",
+      "appointmentOn": "นัดส่ง"
+    },
+    "note": "หมายเหตุ"
   }
 }

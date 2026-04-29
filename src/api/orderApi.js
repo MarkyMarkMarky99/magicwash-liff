@@ -1,47 +1,46 @@
-const ORDER_API_URL =
-  'https://script.google.com/macros/s/AKfycbzCGcGxe45YoGlwc82kCqbP63ODuhMQ6fNh9Dro2bY4p57FBPRx2dUCtb5GEfuPquXZ/exec';
+import { gvizSwrFetch, cacheKey, lsSet, gvizStr } from './localCache';
 
-import { lsGet, lsSet, lsGetStale } from './localCache';
-import { toISODate } from './dateUtils';
+const ORDERS_VIEW_COLS = 'orderId,customerId,orderNumber,receivedDate,dueDate,serviceType,status,quantity,note,itemsJson';
 
-const CACHE_PREFIX = 'mw_order_';
-
-const DATE_FIELDS = ['received_date', 'due_date', 'date'];
-
-function normalizeDates(json) {
-  if (json.status !== 'found' || !json.data) return json;
-  const data = { ...json.data };
-  DATE_FIELDS.forEach((f) => { if (data[f]) data[f] = toISODate(data[f]); });
-  return { ...json, data };
+function transformOrder(row) {
+  let items = [];
+  try { items = JSON.parse(row.itemsJson ?? '[]'); } catch { items = []; }
+  return { ...row, items };
 }
 
-async function _fetchAndCache(url, cacheKey) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = normalizeDates(await res.json());
-  if (json.status === 'found') lsSet(cacheKey, json);
-  return json;
+function preWarm(orders) {
+  orders.forEach((order) => lsSet(cacheKey('ordersView', order.orderId), [order]));
+  return orders;
 }
 
 /**
- * Fetch order details by orderId.
- * Supports Stale-While-Revalidate: pass onRevalidate to receive fresh data in background.
- * @param {string} orderId
- * @param {function} [onRevalidate] - called with fresh data when stale cache is revalidated
+ * Fetch all orders for a customer from OrdersView, sorted newest first.
+ * Also pre-warms individual order caches so tapping a card is instant.
+ */
+export async function getOrdersByCustomerId(customerId, onRevalidate) {
+  const rows = await gvizSwrFetch(
+    'ordersView',
+    `SELECT * WHERE B='${gvizStr(customerId)}' ORDER BY D DESC`,
+    customerId,
+    transformOrder,
+    onRevalidate ? (rows) => onRevalidate(preWarm(rows)) : null,
+    ORDERS_VIEW_COLS,
+  );
+  return preWarm(rows);
+}
+
+/**
+ * Fetch a single order by orderId.
+ * Typically served from cache pre-warmed by getOrdersByCustomerId.
  */
 export async function getOrderById(orderId, onRevalidate) {
-  const cacheKey = CACHE_PREFIX + orderId;
-  const { value, isStale } = lsGetStale(cacheKey);
-
-  if (value) {
-    if (isStale) {
-      const url = `${ORDER_API_URL}?orderId=${encodeURIComponent(orderId)}`;
-      const fresh = _fetchAndCache(url, cacheKey);
-      if (onRevalidate) fresh.then(onRevalidate).catch(() => {});
-    }
-    return value;
-  }
-
-  const url = `${ORDER_API_URL}?orderId=${encodeURIComponent(orderId)}`;
-  return _fetchAndCache(url, cacheKey);
+  const rows = await gvizSwrFetch(
+    'ordersView',
+    `SELECT * WHERE A='${gvizStr(orderId)}' LIMIT 1`,
+    orderId,
+    transformOrder,
+    onRevalidate ? (rows) => onRevalidate(rows[0] ?? null) : null,
+    ORDERS_VIEW_COLS,
+  );
+  return rows[0] ?? null;
 }

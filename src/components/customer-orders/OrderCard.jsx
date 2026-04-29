@@ -8,9 +8,12 @@ const STATUS_CONFIG = {
   'รับแล้ว':   { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',     avatar: 'bg-teal-50 text-teal-700'    },
 };
 
-import { formatDisplayDate } from '../../api/dateUtils';
+import { useTranslation } from 'react-i18next';
+import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
 
 export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
+  const { t, i18n } = useTranslation();
+  const dateLocale = getDateLocale(i18n.language);
   const cfg = STATUS_CONFIG[order.status] ?? {
     icon: 'receipt_long',
     badge: 'bg-gray-100 text-gray-600',
@@ -33,21 +36,21 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <div className="flex items-center gap-1.5 min-w-0">
             <h3 className="font-headline font-bold text-primary text-[14px] leading-tight truncate">
-              {formatDisplayDate(order.date, { day: '2-digit', month: 'short', year: 'numeric' })}
+              {formatDisplayDate(order.receivedDate, { day: '2-digit', month: 'short', year: 'numeric' }, dateLocale)}
             </h3>
             <span className={`inline-flex items-center px-1.5 py-px rounded-full font-label text-[9px] font-bold uppercase tracking-wide shrink-0 ${cfg.badge}`}>
               {order.status}
             </span>
           </div>
           <span className="font-body text-[11px] font-semibold text-on-surface-variant shrink-0">
-            {order.quantity != null ? `${order.quantity} ชิ้น` : ''}
+            {order.quantity != null ? `${order.quantity} ${t('activeOrder.pieces')}` : ''}
           </span>
         </div>
 
         {/* Row 2: notes / serviceType + photo icon */}
         <div className="flex items-center justify-between gap-2">
           <p className="font-body text-xs text-on-surface-variant truncate">
-            {order.notes || order.serviceType || ''}
+            {order.note || order.serviceType || ''}
           </p>
           <button
             onClick={(e) => { e.stopPropagation(); onViewPhotos?.(order.orderId); }}

@@ -15,21 +15,40 @@
   },
   "booking": {
     "pageTitle": "Book Pickup",
-    "selectDate": "Select New Date",
+    "selectDate": "Available Dates",
     "availableTimeslots": "Available Timeslots",
     "notes": "Notes",
     "optional": "(optional)",
     "notesPlaceholder": "Any special instructions for this pickup…",
+    "typeLabel": "Booking Type",
+    "typePickup": "PICKUP",
+    "typeDelivery": "DELIVERY",
     "booking": "Booking…",
     "confirm": "Confirm Booking"
   },
-  "days": ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"],
+  "days": [
+    "SUN",
+    "MON",
+    "TUE",
+    "WED",
+    "THU",
+    "FRI",
+    "SAT"
+  ],
   "bookingSuccess": {
     "title": "Booking Confirmed!",
     "appointment": "Appointment",
     "date": "Date",
     "time": "Time",
     "done": "Done"
+  },
+  "confirmBooking": {
+    "subtitle": "We'll be there to pick up your laundry.",
+    "appointmentDetails": "Appointment Details",
+    "timeAndDate": "Time & Date",
+    "location": "Location",
+    "notes": "Notes",
+    "mapYou": "you"
   },
   "registerSuccess": {
     "line1": "Registration",
@@ -42,5 +61,86 @@
     "phone": "Phone",
     "address": "Address",
     "email": "Email"
+  },
+  "customerOrders": {
+    "customerNo": "Customer No.",
+    "type": "Customer Type",
+    "schedulePickup": "Schedule Pickup",
+    "orderDetails": "Order Details",
+    "viewPhotos": "View all photos",
+    "loadError": "Failed to load",
+    "items": "Items",
+    "orderHistory": "Order History",
+    "ordersCount": "{{count}} ORDERS",
+    "empty": "No orders yet"
+  },
+  "activeOrder": {
+    "pageTitle": "Current Order",
+    "orderNumber": "Order No.",
+    "issuedDate": "Issued Date",
+    "receivedDate": "Picked up",
+    "dueDate": "Due Date",
+    "serviceType": "Service",
+    "tracking": {
+      "pickup": "Pickup",
+      "delivery": "Delivery",
+      "awaiting": "Awaiting schedule"
+    },
+    "customer": {
+      "title": "Customer",
+      "details": "Customer Details"
+    },
+    "quantity": "Quantity",
+    "pieces": "pcs",
+    "tracker": {
+      "title": "Order Status",
+      "pending": "Pending",
+      "received": "Received",
+      "inProgress": "In Progress",
+      "ready": "Ready",
+      "completed": "Completed"
+    },
+    "items": {
+      "title": "Laundry Items",
+      "perUnit": "per piece",
+      "count": "items",
+      "empty": "No items yet"
+    },
+    "cost": {
+      "title": "Summary",
+      "subtotal": "Subtotal",
+      "tax": "VAT 7%",
+      "total": "Total",
+      "voucherPlaceholder": "Voucher code",
+      "applyVoucher": "Apply",
+      "invalidVoucher": "Invalid code",
+      "service": {
+        "express": {
+          "label": "Express",
+          "desc": "Items collected before 14:00 will be returned the same day. Extra 100% surcharge."
+        },
+        "regular": {
+          "label": "Regular",
+          "desc": "Items collected from 10:00–14:00 will be returned next day after 14:00. Extra 50% surcharge."
+        },
+        "saver": {
+          "label": "Saver",
+          "desc": "Items can be collected after 72 hrs."
+        }
+      }
+    },
+    "payment": {
+      "payNow": "Pay Now",
+      "paid": "Paid",
+      "paidOn": "Paid on",
+      "unpaidHint": "Please pay before scheduling delivery"
+    },
+    "delivery": {
+      "schedule": "Schedule Delivery",
+      "scheduled": "Delivery scheduled",
+      "locked": "Payment required",
+      "appointmentOn": "Delivery on"
+    },
+    "note": "Note"
   }
 }

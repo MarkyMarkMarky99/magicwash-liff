@@ -1,13 +1,16 @@
 import { useState, useEffect, createContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLiff } from './hooks/useLiff';
-import { getCustomerByLineId, getCustomerById } from './api/customerApi';
+import { getCustomerById } from './api/customerApi';
 import RegisterCustomer from './pages/RegisterCustomer';
 import BookPickup from './pages/BookPickup';
 import OrderChat from './pages/OrderChat';
 import OrderGallery from './pages/OrderGallery';
 import CustomerOrders from './pages/CustomerOrders';
+import ActiveOrder from './pages/ActiveOrder';
 import LanguageSwitcher from './components/ui/LanguageSwitcher';
+import { getMockActiveOrder } from './mocks/activeOrder';
+import ConfirmBooking from './pages/ConfirmBooking';
 
 /** Pages use this context to set / clear the header's back button. */
 export const HeaderContext = createContext(null);
@@ -21,7 +24,7 @@ function AppShell({ children }) {
 
   return (
     <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
-      <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center justify-between shadow-md z-50">
+      <header className="flex-none bg-primary text-on-primary px-4 py-3 flex items-center shadow-md z-50">
         <div className="flex items-center gap-1">
           {onBack && (
             <button
@@ -36,8 +39,12 @@ function AppShell({ children }) {
             Magicwash Laundry
           </h1>
         </div>
-        <LanguageSwitcher />
       </header>
+
+      {/* Floats above everything including ConfirmBooking overlay */}
+      <div className="absolute top-3 right-4 z-[70]">
+        <LanguageSwitcher />
+      </div>
 
       <HeaderContext.Provider value={setOnBack}>
         {children}
@@ -62,9 +69,9 @@ function AppShell({ children }) {
 export default function App() {
   const params = new URLSearchParams(window.location.search);
 
-  // --- Gallery route: standalone, no LIFF ---
-  // URL: /?gallery&orderId=ORD-12345
-  if (params.has('gallery')) {
+  // --- Photos route: standalone, no LIFF ---
+  // URL: /?photos&orderId=ORD-12345  (legacy: ?gallery&orderId=xxx still works)
+  if (params.has('photos') || params.has('gallery')) {
     return (
       <AppShell>
         <OrderGallery orderId={params.get('orderId')} />
@@ -98,10 +105,10 @@ function AppMain() {
     // --- Case A: custId in URL ---
     if (custId) {
       getCustomerById(custId, (fresh) => {
-        if (fresh.status === 'found') setCustomerData(fresh.data);
+        if (fresh) setCustomerData(fresh);
       })
         .then((res) => {
-          if (res.status === 'found') { setCustomerData(res.data); setView('booking'); }
+          if (res) { setCustomerData(res); setView('booking'); }
           else setView('register');
         })
         .catch(() => setView('register'));
@@ -110,11 +117,11 @@ function AppMain() {
 
     // --- Case B: inside LINE ---
     if (liff.status === 'ready') {
-      getCustomerByLineId(liff.profile.userId, (fresh) => {
-        if (fresh.status === 'found') setCustomerData(fresh.data);
+      getCustomerById(liff.profile.userId, (fresh) => {
+        if (fresh) setCustomerData(fresh);
       })
         .then((res) => {
-          if (res.status === 'found') { setCustomerData(res.data); setView('booking'); }
+          if (res) { setCustomerData(res); setView('booking'); }
           else setView('register');
         })
         .catch(() => setView('register'));
@@ -143,6 +150,40 @@ function AppMain() {
     );
   }
 
+  // Dev preview: ?dev=confirm
+  if (devParam === 'confirm') {
+    return (
+      <AppShell>
+        <ConfirmBooking
+          name="บุสรินทร์ หอมวิเชียร (โบ)"
+          phone="081-234-5678"
+          address="123 ถนนสุขุมวิท, กรุงเทพฯ 10110"
+          date="2026-04-30"
+          timeSlot="10:00-12:00"
+          notes="กรุณาโทรก่อนมาถึง 30 นาที"
+          appointmentId="APT-1042"
+          onDone={() => { }}
+        />
+      </AppShell>
+    );
+  }
+
+  // Dev preview: ?dev=active&state=<unpaid-no-delivery|paid-no-delivery|paid-with-delivery>
+  if (devParam === 'active') {
+    const state = new URLSearchParams(window.location.search).get('state');
+    const mock = getMockActiveOrder(state || undefined);
+    return (
+      <AppShell>
+        <ActiveOrder
+          customer={mock.customer}
+          order={mock.order}
+          pickupAppointment={mock.pickupAppointment}
+          deliveryAppointment={mock.deliveryAppointment}
+        />
+      </AppShell>
+    );
+  }
+
   if (view === 'loading' || liff.status === 'loading') {
     return <SplashScreen />;
   }
@@ -152,9 +193,9 @@ function AppMain() {
       {view === 'booking'
         ? <BookPickup userData={customerData} />
         : <RegisterCustomer
-            lineProfile={liff.profile}
-            onRegisterSuccess={handleRegisterSuccess}
-          />
+          lineProfile={liff.profile}
+          onRegisterSuccess={handleRegisterSuccess}
+        />
       }
     </AppShell>
   );

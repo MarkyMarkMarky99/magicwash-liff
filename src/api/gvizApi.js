@@ -1,7 +1,4 @@
-import { lsGet, lsSet } from './localCache';
-
-const CACHE_PREFIX = 'mw_photos_';
-const SHEET_NAME = 'LaundryPhotos';
+import { gvizSwrFetch, gvizStr } from './localCache';
 
 function toDirectUrl(url) {
   if (!url) return null;
@@ -15,33 +12,18 @@ function toDirectUrl(url) {
   return url;
 }
 
-/**
- * Fetch laundry photos for a given orderId via the /api/gviz proxy.
- * Sheet columns: B=orderId, F=image_url, G=image_label
- * @param {string} orderId
- * @returns {Promise<Array<{ imageUrl: string, label: string }>>}
- */
-export async function getPhotosByOrderId(orderId) {
-  const cached = lsGet(CACHE_PREFIX + orderId);
-  if (cached) {
-    console.log('[gvizApi] cache hit:', orderId);
-    return cached;
-  }
+function transformPhoto(row) {
+  return { imageUrl: toDirectUrl(row.imageUrl), label: row.notes ?? '' };
+}
 
-  const tq = `SELECT F,G WHERE B='${orderId}'`;
-  const res = await fetch(
-    `/api/gviz?sheet=${encodeURIComponent(SHEET_NAME)}&tq=${encodeURIComponent(tq)}`
+export async function getPhotosByOrderId(orderId, onRevalidate) {
+  const rows = await gvizSwrFetch(
+    'photos',
+    `SELECT * WHERE B='${gvizStr(orderId)}'`,
+    orderId,
+    transformPhoto,
+    onRevalidate ? (rows) => onRevalidate(rows.filter((r) => r.imageUrl)) : null,
+    'imageUrl,notes',
   );
-  if (!res.ok) throw new Error(`photos API responded ${res.status}`);
-
-  const rows = await res.json();
-  const photos = rows
-    .map((row) => ({
-      imageUrl: toDirectUrl(row.c0),
-      label: row.c1 ?? '',
-    }))
-    .filter((item) => item.imageUrl);
-
-  lsSet(CACHE_PREFIX + orderId, photos);
-  return photos;
+  return rows.filter((r) => r.imageUrl);
 }

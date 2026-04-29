@@ -3,6 +3,13 @@
  * @param {string|null|undefined} raw
  * @returns {Date|null}
  */
+export function gvizDateToISO(v) {
+  if (!v) return null;
+  const m = String(v).match(/^Date\((\d+),(\d+),(\d+)\)$/);
+  if (!m) return v;
+  return `${m[1]}-${String(Number(m[2]) + 1).padStart(2, '0')}-${String(Number(m[3])).padStart(2, '0')}`;
+}
+
 export function parseSheetDate(raw) {
   if (!raw) return null;
   const parts = String(raw).split('/');
@@ -30,16 +37,21 @@ export function toISODate(raw) {
   return `${y}-${m}-${day}`;
 }
 
+export function getDateLocale(lang) {
+  return lang === 'en' ? 'en-GB' : 'th-TH-u-ca-gregory';
+}
+
 /**
  * Formats a date value for display.
  * Accepts ISO strings, DD/MM/YYYY, or Date objects.
  * @param {string|Date|null|undefined} val
  * @param {Intl.DateTimeFormatOptions} [opts]
+ * @param {string} [locale]
  * @returns {string}
  */
-export function formatDisplayDate(val, opts = { day: 'numeric', month: 'short', year: 'numeric' }) {
+export function formatDisplayDate(val, opts = { day: 'numeric', month: 'short', year: 'numeric' }, locale = 'th-TH-u-ca-gregory') {
   if (!val) return '—';
   const d = val instanceof Date ? val : parseSheetDate(String(val));
   if (!d) return String(val);
-  return d.toLocaleDateString('th-TH-u-ca-gregory', opts);
+  return d.toLocaleDateString(locale, opts);
 }

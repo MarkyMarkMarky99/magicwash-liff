@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import OrderCard from './OrderCard';
 
 export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefresh, refreshing = false }) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -14,12 +16,12 @@ export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefre
       >
         <div className="flex items-center gap-2.5">
           <span className="material-symbols-outlined text-primary text-[16px]">receipt_long</span>
-          <h2 className="font-headline font-bold text-[13px] tracking-tight">ประวัติออเดอร์</h2>
+          <h2 className="font-headline font-bold text-[13px] tracking-tight">{t('customerOrders.orderHistory')}</h2>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 h-[22px]">
             <span className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
-              {orders.length} orders
+              {t('customerOrders.ordersCount', { count: orders.length })}
             </span>
           </div>
           <button
@@ -36,7 +38,7 @@ export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefre
 
       {/* Empty */}
       {!collapsed && orders.length === 0 && (
-        <p className="px-6 py-4 text-sm text-on-surface-variant italic">ยังไม่มีออเดอร์</p>
+        <p className="px-6 py-4 text-sm text-on-surface-variant italic">{t('customerOrders.empty')}</p>
       )}
 
       {/* Cards */}
