@@ -14,6 +14,9 @@ const WRITE_TARGETS = {
   customer: {
     url:      process.env.APPSCRIPT_CUSTOMER_URL,
     required: ['customerName'],
+    requiredByAction: {
+      UPDATE: ['customerId'],
+    },
   },
   appointment: {
     url:      process.env.APPSCRIPT_APPOINTMENT_URL,
@@ -44,7 +47,8 @@ export default async function handler(req, res) {
     });
   }
 
-  const validationError = validate(target.required, payload);
+  const required = target.requiredByAction?.[payload.action] ?? target.required;
+  const validationError = validate(required, payload);
   if (validationError) return res.status(422).json({ error: validationError });
 
   const upstream = await fetch(target.url, {

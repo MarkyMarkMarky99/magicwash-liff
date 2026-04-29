@@ -39,6 +39,11 @@ export default function RegisterCustomer({ onRegisterSuccess, lineProfile }) {
         setRegisteredData({ ...formData, customerId: res.data.uuid, label: res.data.label });
         setShowSuccessModal(true);
       } else if (res.status === 'error' && res.existingCustomerId) {
+        if (!formData.lineId) {
+          onRegisterSuccess({ ...formData, customerId: res.existingCustomerId, label: res.existingCustomerId });
+          return;
+        }
+
         // Phone exists but no LINE account linked yet — silently link and proceed
         const linkRes = await linkLineId(res.existingCustomerId, formData.lineId);
         if (linkRes.status === 'success') {

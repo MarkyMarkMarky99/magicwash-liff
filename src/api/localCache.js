@@ -61,7 +61,16 @@ export async function apiPost(table, payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ table, payload }),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    let message = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body?.error) message = body.error;
+    } catch {
+      // Keep the HTTP status when the response is not JSON.
+    }
+    throw new Error(message);
+  }
   return res.json();
 }
 
