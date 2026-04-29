@@ -1,12 +1,12 @@
-import { cacheKey, swrFetch, apiPost, gvizStr } from './localCache';
+import { cacheKey, swrFetch, fetchAndCache, lsClear, apiPost, gvizStr } from './localCache';
 
 const CUSTOMER_ID_RE = /^[A-Za-z0-9]{8}$/;
 const LINE_ID_RE     = /^U[0-9a-f]{32}$/i;
 
 
 function resolveIdParam(id) {
-  if (CUSTOMER_ID_RE.test(id)) return { lookupCol: 'B', key: cacheKey('customer', id) };
-  if (LINE_ID_RE.test(id)) return { lookupCol: 'J', key: cacheKey('customer:line', id) };
+  if (CUSTOMER_ID_RE.test(id)) return { lookupCol: 'B', key: cacheKey('customer', id), isLineId: false };
+  if (LINE_ID_RE.test(id)) return { lookupCol: 'J', key: cacheKey('customer:line', id), isLineId: true };
   throw new Error(`[customerApi] Invalid ID format: "${id}"`);
 }
 
@@ -18,9 +18,16 @@ function resolveIdParam(id) {
 const CUSTOMER_COLS = 'customerId,customerIndex,customerName,phone,address,location,registeredDate,facebook,lineId,whatsapp,email,customerType,source,scheduledDays,lastVisitDate,preferredContactMethod';
 
 export async function getCustomerById(id, onRevalidate) {
-  const { lookupCol, key } = resolveIdParam(id);
+  const { lookupCol, key, isLineId } = resolveIdParam(id);
   const tq = `SELECT * WHERE ${lookupCol}='${gvizStr(id)}' LIMIT 1`;
   const url = `/api/gviz?source=customers&tq=${encodeURIComponent(tq)}&cols=${encodeURIComponent(CUSTOMER_COLS)}`;
+
+  if (isLineId) {
+    const rows = await fetchAndCache(url, key);
+    if (!rows.length) lsClear(key);
+    return rows[0] ?? null;
+  }
+
   const rows = await swrFetch(url, key, undefined,
     onRevalidate ? (rows) => onRevalidate(rows[0] ?? null) : null
   );
