@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getOrderById } from '../../api/orderApi';
 import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
@@ -10,6 +10,11 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
   const [status, setStatus] = useState('loading');
   const [visible, setVisible] = useState(false);
   const [itemsCollapsed, setItemsCollapsed] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragStartYRef = useRef(0);
+  const latestDragOffsetRef = useRef(0);
+  const sheetRef = useRef(null);
 
   // Trigger slide-up after mount
   useEffect(() => {
@@ -31,8 +36,43 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
   }, [orderId]);
 
   const handleClose = () => {
+    setDragOffset(0);
+    latestDragOffsetRef.current = 0;
     setVisible(false);
     setTimeout(onClose, 280);
+  };
+
+  const handleDragStart = (event) => {
+    if (!visible) return;
+    dragStartYRef.current = event.clientY;
+    latestDragOffsetRef.current = 0;
+    setDragging(true);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handleDragMove = (event) => {
+    if (!dragging) return;
+    const nextOffset = Math.max(0, event.clientY - dragStartYRef.current);
+    latestDragOffsetRef.current = nextOffset;
+    setDragOffset(nextOffset);
+  };
+
+  const handleDragEnd = (event) => {
+    if (!dragging) return;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setDragging(false);
+
+    const sheetHeight = sheetRef.current?.offsetHeight || 0;
+    const closeThreshold = Math.max(80, sheetHeight * 0.18);
+
+    if (latestDragOffsetRef.current >= closeThreshold) {
+      handleClose();
+    } else {
+      latestDragOffsetRef.current = 0;
+      setDragOffset(0);
+    }
   };
 
   const sheetTop = topOffset != null ? `calc(${topOffset}px - 30%)` : '8%';
@@ -47,40 +87,36 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
 
       {/* Sheet */}
       <div
-        className={`absolute inset-x-0 bottom-0 z-40 bg-surface rounded-t-2xl shadow-2xl flex flex-col transition-transform duration-300 ease-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ top: sheetTop }}
+        ref={sheetRef}
+        className={`absolute inset-x-0 bottom-0 z-40 bg-surface rounded-t-2xl shadow-2xl flex flex-col ease-out ${dragging ? '' : 'transition-transform duration-300'}`}
+        style={{
+          top: sheetTop,
+          transform: visible ? `translateY(${dragOffset}px)` : 'translateY(100%)',
+        }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-2.5 pb-1 flex-none">
+        <div
+          className="flex justify-center pt-2 pb-0.5 flex-none cursor-grab active:cursor-grabbing touch-none"
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerCancel={handleDragEnd}
+        >
           <div className="w-9 h-1 rounded-full bg-outline-variant" />
         </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 px-4 pt-1 pb-3 flex-none border-b border-outline-variant/20">
+        <div
+          className="flex items-start justify-between gap-3 px-4 pt-0.5 pb-2 flex-none border-b border-outline-variant/20 cursor-grab active:cursor-grabbing touch-none"
+          onPointerDown={handleDragStart}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerCancel={handleDragEnd}
+        >
           <div className="min-w-0 flex-1">
-            <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-widest mb-0.5">{t('activeOrder.orderNumber')}</p>
-            <h2 className="font-headline font-bold text-[22px] text-on-surface leading-tight truncate">{orderId}</h2>
+            <p className="font-label text-[8px] text-on-surface-variant font-bold uppercase tracking-widest mb-0.5">{t('activeOrder.orderNumber')}</p>
+            <h2 className="font-headline font-bold text-[18px] text-on-surface leading-tight truncate">{orderId}</h2>
           </div>
-          {status === 'done' && order && (
-            <div className="flex flex-col items-end gap-1.5 shrink-0 pt-0.5">
-              {order.serviceType && (
-                <div className="flex items-center gap-2">
-                  <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-widest whitespace-nowrap">{t('activeOrder.serviceType')}</p>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 font-headline text-[11px] font-bold text-primary">
-                    {order.serviceType}
-                  </span>
-                </div>
-              )}
-              {order.quantity > 0 && (
-                <div className="flex items-center gap-2">
-                  <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-widest whitespace-nowrap">{t('activeOrder.quantity')}</p>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 font-headline text-[11px] font-bold text-primary">
-                    {order.quantity} {t('activeOrder.pieces')}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Dates + view photos button — pinned below header, outside scroll */}
@@ -152,7 +188,7 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 h-[22px]">
                         <span className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
-                          {order.items.length} {t('activeOrder.items.count')}
+                          {order.quantity || 0} {t('activeOrder.pieces')}
                         </span>
                       </div>
                       <span className={`material-symbols-outlined text-primary text-[16px] transition-transform ${itemsCollapsed ? '' : 'rotate-180'}`}>
