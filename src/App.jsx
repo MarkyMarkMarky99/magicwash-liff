@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useLiff } from './hooks/useLiff';
 import { getCustomerById } from './api/customerApi';
 import RegisterCustomer from './pages/RegisterCustomer';
-import BookPickup from './pages/BookPickup';
 import OrderChat from './pages/OrderChat';
 import OrderGallery from './pages/OrderGallery';
 import CustomerOrders from './pages/CustomerOrders';
@@ -191,7 +190,7 @@ function AppMain() {
   return (
     <AppShell>
       {view === 'booking'
-        ? <BookPickup userData={customerData} />
+        ? <CustomerOrders custId={customerData.customerId} />
         : <RegisterCustomer
           lineProfile={liff.profile}
           onRegisterSuccess={handleRegisterSuccess}
