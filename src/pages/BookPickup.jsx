@@ -1,6 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createAppointment } from '../api/customerApi';
+import {
+  getAppointmentsFresh,
+  findBlockingAppointment,
+  clearAppointmentsCache,
+  bookingKey,
+  acquireBookingLock,
+  releaseBookingLock,
+  markRecentBooking,
+  hasRecentBooking,
+  markUncertainBooking,
+  clearUncertainBooking,
+  hasUncertainBooking,
+} from '../api/appointmentApi';
+import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
 import PageLayout from '../components/layout/PageLayout';
 import BookingSuccessModal from '../components/booking/BookingSuccessModal';
 const TIME_SLOTS = ['10:00-12:00', '13:00-15:00', '15:00-17:00', '18:00-20:00'];
@@ -11,8 +25,6 @@ function toDateStr(d) {
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 }
-
-const todayStr = toDateStr(new Date());
 
 function getSlotStartMinutes(slot) {
   const [h, m] = slot.split('-')[0].split(':').map(Number);
@@ -31,14 +43,18 @@ function getNext14Days() {
   return result;
 }
 
-export default function BookPickup({ userData, type = 'pickup', orderId = null }) {
+export default function BookPickup({ userData, type = 'pickup', orderId = null, onDone, onBusyChange }) {
   const { t, i18n } = useTranslation();
   const dateLocale = i18n.language === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB';
+  // Computed per render so it does not go stale if the app stays open across midnight.
+  const todayStr = toDateStr(new Date());
+  const customerId = userData?.customerId || userData?.uuid || '';
+
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
     if (now.getDay() !== 2 && TIME_SLOTS.some(s => getSlotStartMinutes(s) > nowMinutes)) {
-      return todayStr;
+      return toDateStr(now);
     }
     const d = new Date(now);
     d.setDate(d.getDate() + 1);
@@ -56,6 +72,50 @@ export default function BookPickup({ userData, type = 'pickup', orderId = null }
   const [isBooking, setIsBooking] = useState(false);
   const [bookingError, setBookingError] = useState(null);
   const [addressExpanded, setAddressExpanded] = useState(false);
+
+  // Booking guard: gate the form on a fresh read of existing appointments.
+  const [guardState, setGuardState] = useState('checking'); // 'checking' | 'ready' | 'blocked' | 'error'
+  const [guardErrorKind, setGuardErrorKind] = useState(null); // 'read' | 'missingOrder'
+  const [blockingAppt, setBlockingAppt] = useState(null);
+  // After an ambiguous POST (timeout/error), the append may or may not have landed —
+  // force a fresh guard check before the next submit so a retry can't duplicate.
+  const [mustRecheck, setMustRecheck] = useState(false);
+
+  const key = bookingKey({ customerId, type, orderId });
+
+  const runGuard = useCallback(async () => {
+    setGuardErrorKind(null);
+    setBlockingAppt(null);
+    setGuardState('checking');
+
+    if (!customerId) { setGuardState('error'); setGuardErrorKind('read'); return; }
+    if (type === 'delivery' && !String(orderId ?? '').trim()) {
+      setGuardState('error'); setGuardErrorKind('missingOrder'); return;
+    }
+
+    try {
+      const list = await getAppointmentsFresh(customerId);
+      const blocking = findBlockingAppointment(list, { type, orderId });
+      if (blocking) {
+        setBlockingAppt(blocking);
+        setGuardState('blocked');
+      } else if (hasRecentBooking(key)) {
+        // Just booked but GViz may not reflect it yet — stay blocked without details.
+        setBlockingAppt(null);
+        setGuardState('blocked');
+      } else {
+        // A prior uncertain attempt (possibly from another mount) forces a recheck before submit.
+        setMustRecheck(hasUncertainBooking(key));
+        setGuardState('ready');
+      }
+    } catch {
+      // Fail-closed: cannot verify → do not allow booking.
+      setGuardState('error');
+      setGuardErrorKind('read');
+    }
+  }, [customerId, type, orderId, key]);
+
+  useEffect(() => { runGuard(); }, [runGuard]);
 
   const dates = getNext14Days();
   const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
@@ -90,12 +150,27 @@ export default function BookPickup({ userData, type = 'pickup', orderId = null }
   const displayAddress = (userData?.address || '').trim();
 
   const handleConfirm = async () => {
-    if (!canConfirm) return;
+    if (!canConfirm || guardState !== 'ready') return;
+    // Cross-remount guard: another in-flight submit for the same booking is running.
+    if (!acquireBookingLock(key)) return;
     setIsBooking(true);
     setBookingError(null);
+    onBusyChange?.(true);
     try {
+      // Retry after an uncertain previous attempt: re-verify against live data first.
+      if (mustRecheck) {
+        const list = await getAppointmentsFresh(customerId);
+        const blocking = findBlockingAppointment(list, { type, orderId });
+        if (blocking || hasRecentBooking(key)) {
+          setBlockingAppt(blocking || null);
+          setGuardState('blocked');
+          return;
+        }
+        setMustRecheck(false);
+      }
+
       const res = await createAppointment({
-        customerId:      userData?.customerId || userData?.uuid || '',
+        customerId,
         appointmentDate: selectedDate,
         timeSlot:        selectedTime,
         address:         userData?.address || '',
@@ -104,15 +179,29 @@ export default function BookPickup({ userData, type = 'pickup', orderId = null }
         orderId,
       });
       if (res.status === 'success') {
+        markRecentBooking(key);
+        clearUncertainBooking(key);
+        clearAppointmentsCache(customerId);
         setSuccess(true);
       } else {
+        markUncertainBooking(key);
+        setMustRecheck(true);
         setBookingError(res.message || 'Booking failed');
       }
     } catch (err) {
+      markUncertainBooking(key);
+      setMustRecheck(true);
       setBookingError(err.message);
     } finally {
       setIsBooking(false);
+      releaseBookingLock(key);
+      onBusyChange?.(false);
     }
+  };
+
+  const handleSuccessClose = () => {
+    setSuccess(false);
+    onDone?.();
   };
 
   const footer = (
@@ -156,11 +245,82 @@ export default function BookPickup({ userData, type = 'pickup', orderId = null }
           address={displayAddress}
           date={selectedDate}
           timeSlot={selectedTime}
-          onClose={() => setSuccess(false)}
+          onClose={handleSuccessClose}
         />
       )}
 
-      <PageLayout footer={footer} scrollable>
+      <PageLayout footer={guardState === 'ready' ? footer : null} scrollable>
+
+        {/* Guard: checking */}
+        {guardState === 'checking' && (
+          <div className="flex-1 h-full flex flex-col items-center justify-center gap-3 px-6">
+            <span className="material-symbols-outlined text-primary text-5xl animate-spin">sync</span>
+            <p className="font-body text-on-surface-variant text-sm text-center">{t('booking.checking')}</p>
+          </div>
+        )}
+
+        {/* Guard: error (fail-closed) */}
+        {guardState === 'error' && (
+          <div className="flex-1 h-full flex flex-col items-center justify-center gap-3 px-8 text-center">
+            <span className="material-symbols-outlined text-error text-5xl">error_outline</span>
+            <h2 className="font-headline font-bold text-base text-on-surface">
+              {guardErrorKind === 'missingOrder' ? t('booking.deliveryMissingOrder') : t('booking.checkErrorTitle')}
+            </h2>
+            {guardErrorKind !== 'missingOrder' && (
+              <>
+                <p className="font-body text-sm text-on-surface-variant">{t('booking.checkErrorDesc')}</p>
+                <button
+                  onClick={runGuard}
+                  className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary font-headline font-bold text-sm hover:brightness-110 active:scale-[0.98] transition-all"
+                >
+                  <span className="material-symbols-outlined text-[18px]">refresh</span>
+                  {t('booking.retry')}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Guard: blocked — show the existing appointment */}
+        {guardState === 'blocked' && (
+          <div className="flex-1 h-full flex flex-col items-center justify-center gap-4 px-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-[36px]">event_available</span>
+            </div>
+            <h2 className="font-headline font-bold text-lg text-on-surface leading-snug">
+              {type === 'delivery' ? t('booking.blockedDeliveryTitle') : t('booking.blockedPickupTitle')}
+            </h2>
+            {blockingAppt && (
+              <div className="w-full max-w-[320px] border border-outline-variant/40 rounded-2xl px-4 pt-6 pb-4 relative text-left">
+                <p className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface px-3 font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-widest whitespace-nowrap">
+                  {t('booking.existingAppointment')}
+                </p>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 font-headline text-[11px] font-bold text-primary">
+                    {t(type === 'delivery' ? 'booking.typeDelivery' : 'booking.typePickup')}
+                  </span>
+                  {blockingAppt.appointmentId && (
+                    <span className="font-label text-[10px] text-on-surface-variant tracking-wide truncate">{blockingAppt.appointmentId}</span>
+                  )}
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-on-surface">
+                    <span className="material-symbols-outlined text-primary text-[18px]" aria-hidden="true">calendar_today</span>
+                    <span className="font-body text-sm font-medium">{formatDisplayDate(blockingAppt.appointmentDate, undefined, getDateLocale(i18n.language))}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-on-surface">
+                    <span className="material-symbols-outlined text-primary text-[18px]" aria-hidden="true">schedule</span>
+                    <span className="font-body text-sm font-medium">{blockingAppt.timeSlot || '—'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="font-body text-xs text-on-surface-variant">{t('booking.blockedDesc')}</p>
+          </div>
+        )}
+
+        {/* Ready — booking form */}
+        {guardState === 'ready' && (
         <div className="px-6 py-5 space-y-5 pb-6">
 
         {/* Summary — OrderInfoCard style */}
@@ -307,6 +467,7 @@ export default function BookPickup({ userData, type = 'pickup', orderId = null }
         </section>
 
         </div>
+        )}
       </PageLayout>
     </>
   );

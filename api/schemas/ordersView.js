@@ -21,7 +21,7 @@ export const schema = {
     receivedDate:{ type: ['string', 'null'], format: 'date' },
     dueDate:     { type: ['string', 'null'], format: 'date' },
     serviceType: { type: ['string', 'null'], enum: ['ซักรีด', 'ซักแห้ง', null] },
-    status:      { type: ['string', 'null'], enum: ['CONFIRM', 'SUBMITTED', null] },
+    status:      { type: ['string', 'null'], enum: ['SUBMITTED', 'PENDING', 'APPROVED', 'CONFIRM', 'RECEIVED', 'COMPLETED', null] },
     quantity:    { type: ['string', 'null'] },
     note:        { type: ['string', 'null'] },
     itemsJson:   { type: ['string', 'null'] },

@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCustomerById } from '../api/customerApi';
 import { getOrdersByCustomerId } from '../api/orderApi';
+import { getWaitingPickups, clearAppointmentsCache } from '../api/appointmentApi';
 import { lsClear, cacheKey } from '../api/localCache';
 import { HeaderContext } from '../App';
 import CustomerCard from '../components/customer-orders/CustomerCard';
@@ -18,10 +19,19 @@ export default function CustomerOrders({ custId }) {
   const [galleryOrderId, setGalleryOrderId]   = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [booking, setBooking]                 = useState(null); // { type: 'pickup'|'delivery', orderId: string|null }
+  const [bookingBusy, setBookingBusy]         = useState(false); // true while a booking POST is in flight
+  const [waitingPickups, setWaitingPickups]   = useState([]);    // upcoming active pickups (from Appointments)
   const [sheetTop, setSheetTop]               = useState(null);
   const { t } = useTranslation();
   const setOnBack      = useContext(HeaderContext);
   const cardSectionRef = useRef(null);
+
+  const loadWaitingPickups = useCallback((id = custId) => {
+    if (!id) return;
+    getWaitingPickups(id, (fresh) => setWaitingPickups(fresh))
+      .then((res) => setWaitingPickups(res))
+      .catch(() => { /* display-only, ignore */ });
+  }, [custId]);
 
   useEffect(() => {
     if (!custId) { setStatus('error'); return; }
@@ -36,22 +46,28 @@ export default function CustomerOrders({ custId }) {
         setStatus(customerRes ? 'done' : 'error');
       })
       .catch(() => setStatus('error'));
-  }, [custId]);
+
+    loadWaitingPickups(custId);
+  }, [custId, loadWaitingPickups]);
 
   useEffect(() => {
-    if (galleryOrderId) {
+    if (bookingBusy) {
+      // Lock navigation while a booking write is in flight (prevents back → reopen → resubmit).
+      setOnBack(null);
+    } else if (galleryOrderId) {
       setOnBack(() => () => setGalleryOrderId(null));
     } else if (booking) {
       setOnBack(() => () => setBooking(null));
     } else {
       setOnBack(null);
     }
-  }, [galleryOrderId, booking]);
+  }, [galleryOrderId, booking, bookingBusy]);
 
   const handleRefresh = useCallback(async () => {
     if (!custId || refreshing) return;
     lsClear(cacheKey('customer', custId));
     lsClear(cacheKey('ordersView', custId));
+    clearAppointmentsCache(custId);
     setRefreshing(true);
     try {
       const [customerRes, ordersRes] = await Promise.all([
@@ -60,10 +76,11 @@ export default function CustomerOrders({ custId }) {
       ]);
       if (customerRes) setCustomer(customerRes);
       setOrders(ordersRes);
+      loadWaitingPickups(custId);
       setStatus('done');
     } catch { /* silently fail */ }
     finally { setRefreshing(false); }
-  }, [custId, refreshing]);
+  }, [custId, refreshing, loadWaitingPickups]);
 
   const handleSelectOrder = (orderId) => {
     if (cardSectionRef.current) {
@@ -101,7 +118,13 @@ export default function CustomerOrders({ custId }) {
 
       {/* Book pickup / delivery view — embedded, no own header */}
       {booking && !galleryOrderId && (
-        <BookPickup userData={customer} type={booking.type} orderId={booking.orderId} />
+        <BookPickup
+          userData={customer}
+          type={booking.type}
+          orderId={booking.orderId}
+          onBusyChange={setBookingBusy}
+          onDone={() => { setBooking(null); loadWaitingPickups(custId); }}
+        />
       )}
 
       {/* Orders list view */}
@@ -156,6 +179,7 @@ export default function CustomerOrders({ custId }) {
               <div className="flex-1">
                 <OrderList
                   orders={orders}
+                  waitingPickups={waitingPickups}
                   onViewPhotos={setGalleryOrderId}
                   onSelectOrder={handleSelectOrder}
                   onRefresh={handleRefresh}

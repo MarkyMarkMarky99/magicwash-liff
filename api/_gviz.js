@@ -8,6 +8,7 @@ import { columns as orderItemFormsColumns,dateColumns as orderItemFormsDates} fr
 import { columns as ordersViewColumns,    dateColumns as ordersViewDates    } from './schemas/ordersView.js';
 import { columns as ordersColumns,        dateColumns as ordersDates        } from './schemas/orders.js';
 import { columns as orderItemsColumns,    dateColumns as orderItemsDates    } from './schemas/orderItems.js';
+import { columns as appointmentsColumns,  dateColumns as appointmentsDates  } from './schemas/appointments.js';
 
 export const SOURCE_MAP = {
   orderForm:      { sheetName: 'OrderForm',      spreadsheetId: process.env.GVIZ_SPREADSHEET_ID,          columns: orderFormColumns,      dateColumns: orderFormDates      },
@@ -18,6 +19,7 @@ export const SOURCE_MAP = {
   ordersView:     { sheetName: 'OrdersView',     spreadsheetId: process.env.GVIZ_PORTAL_SPREADSHEET_ID,   columns: ordersViewColumns,     dateColumns: ordersViewDates     },
   orders:         { sheetName: 'Orders',         spreadsheetId: process.env.GVIZ_ORDERS_SPREADSHEET_ID,   columns: ordersColumns,         dateColumns: ordersDates         },
   orderItems:     { sheetName: 'OrderItems',     spreadsheetId: process.env.GVIZ_ORDERS_SPREADSHEET_ID,   columns: orderItemsColumns,     dateColumns: orderItemsDates     },
+  appointments:   { sheetName: 'Appointments',   spreadsheetId: process.env.GVIZ_APPOINTMENTS_SPREADSHEET_ID, columns: appointmentsColumns, dateColumns: appointmentsDates },
 };
 
 export function gvizDateToISO(v) {

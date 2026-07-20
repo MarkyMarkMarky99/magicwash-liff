@@ -24,7 +24,20 @@
     "typePickup": "รับผ้า",
     "typeDelivery": "ส่งผ้า",
     "booking": "กำลังจอง…",
-    "confirm": "ยืนยันการจอง"
+    "confirm": "ยืนยันการจอง",
+    "checking": "กำลังตรวจสอบนัดของคุณ…",
+    "checkErrorTitle": "ตรวจสอบนัดไม่สำเร็จ",
+    "checkErrorDesc": "เพื่อป้องกันการจองซ้ำ ระบบจะยังไม่ให้จองจนกว่าจะตรวจสอบได้ กรุณาลองใหม่",
+    "retry": "ลองใหม่",
+    "blockedPickupTitle": "คุณมีนัดรับผ้าที่กำลังจะถึงอยู่แล้ว",
+    "blockedDeliveryTitle": "คุณมีนัดส่งผ้าของออเดอร์นี้อยู่แล้ว",
+    "blockedDesc": "หากต้องการเปลี่ยนแปลง กรุณาติดต่อร้าน",
+    "existingAppointment": "นัดปัจจุบัน",
+    "deliveryMissingOrder": "ไม่พบเลขออเดอร์สำหรับนัดส่งผ้า"
+  },
+  "waitingPickup": {
+    "badge": "รอรับผ้า",
+    "sectionTitle": "นัดรับผ้าที่กำลังจะถึง"
   },
   "days": ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"],
   "bookingSuccess": {
@@ -131,7 +144,8 @@
       "schedule": "นัดส่งผ้าคืน",
       "scheduled": "นัดส่งผ้าคืนแล้ว",
       "locked": "กรุณาชำระเงินก่อน",
-      "appointmentOn": "นัดส่ง"
+      "appointmentOn": "นัดส่ง",
+      "completed": "จัดส่งแล้ว"
     },
     "note": "หมายเหตุ"
   }

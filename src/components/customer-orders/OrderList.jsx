@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import OrderCard from './OrderCard';
+import WaitingPickupCard from './WaitingPickupCard';
 
-export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefresh, refreshing = false }) {
+export default function OrderList({ orders, waitingPickups = [], onViewPhotos, onSelectOrder, onRefresh, refreshing = false }) {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
+  const isEmpty = orders.length === 0 && waitingPickups.length === 0;
 
   return (
     <section className="bg-white w-full">
@@ -37,13 +39,16 @@ export default function OrderList({ orders, onViewPhotos, onSelectOrder, onRefre
       </div>
 
       {/* Empty */}
-      {!collapsed && orders.length === 0 && (
+      {!collapsed && isEmpty && (
         <p className="px-6 py-4 text-sm text-on-surface-variant italic">{t('customerOrders.empty')}</p>
       )}
 
-      {/* Cards */}
-      {!collapsed && orders.length > 0 && (
+      {/* Cards — upcoming pickups first (from Appointments), then order history */}
+      {!collapsed && !isEmpty && (
         <div className="divide-y divide-outline-variant/10">
+          {waitingPickups.map((appt) => (
+            <WaitingPickupCard key={appt.appointmentId} appointment={appt} />
+          ))}
           {orders.map((order) => (
             <OrderCard key={order.orderId} order={order} onViewPhotos={onViewPhotos} onSelectOrder={onSelectOrder} />
           ))}

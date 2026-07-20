@@ -1,7 +1,11 @@
 const STATUS_CONFIG = {
-  // Real statuses from OrderForm sheet
+  // Real statuses from OrdersView sheet
   'SUBMITTED': { icon: 'local_laundry_service', badge: 'bg-amber-100 text-amber-700', avatar: 'bg-amber-50 text-amber-600' },
+  'PENDING':   { icon: 'schedule',              badge: 'bg-amber-100 text-amber-700', avatar: 'bg-amber-50 text-amber-600' },
+  'APPROVED':  { icon: 'task_alt',              badge: 'bg-blue-100 text-blue-700',   avatar: 'bg-blue-50 text-blue-700'   },
   'CONFIRM':   { icon: 'check_circle',          badge: 'bg-green-100 text-green-700', avatar: 'bg-green-50 text-green-700' },
+  'RECEIVED':  { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',    avatar: 'bg-teal-50 text-teal-700'   },
+  'COMPLETED': { icon: 'done_all',              badge: 'bg-green-100 text-green-700', avatar: 'bg-green-50 text-green-700' },
   // Backward-compatible Thai labels (mock data)
   'เสร็จแล้ว': { icon: 'check_circle',         badge: 'bg-green-100 text-green-700',  avatar: 'bg-green-50 text-green-700'  },
   'กำลังซัก':  { icon: 'local_laundry_service', badge: 'bg-amber-100 text-amber-700',  avatar: 'bg-amber-50 text-amber-600'  },

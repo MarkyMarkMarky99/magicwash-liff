@@ -136,13 +136,23 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => onScheduleDelivery?.(orderId)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
-              >
-                <span className="material-symbols-outlined text-[16px] leading-none">local_shipping</span>
-                {t('activeOrder.delivery.schedule')}
-              </button>
+              {order.status === 'COMPLETED' ? (
+                <div
+                  aria-disabled="true"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-container text-on-surface-variant font-label text-[12px] font-semibold cursor-not-allowed"
+                >
+                  <span className="material-symbols-outlined text-[16px] leading-none">task_alt</span>
+                  {t('activeOrder.delivery.completed')}
+                </div>
+              ) : (
+                <button
+                  onClick={() => onScheduleDelivery?.(orderId)}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
+                >
+                  <span className="material-symbols-outlined text-[16px] leading-none">local_shipping</span>
+                  {t('activeOrder.delivery.schedule')}
+                </button>
+              )}
               <button
                 onClick={() => onViewPhotos?.(orderId)}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"

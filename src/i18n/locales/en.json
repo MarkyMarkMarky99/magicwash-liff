@@ -24,7 +24,20 @@
     "typePickup": "PICKUP",
     "typeDelivery": "DELIVERY",
     "booking": "Booking…",
-    "confirm": "Confirm Booking"
+    "confirm": "Confirm Booking",
+    "checking": "Checking your appointments…",
+    "checkErrorTitle": "Couldn't verify your bookings",
+    "checkErrorDesc": "To prevent duplicate bookings, you can't book until we verify. Please try again.",
+    "retry": "Try again",
+    "blockedPickupTitle": "You already have an upcoming pickup",
+    "blockedDeliveryTitle": "You already have a delivery for this order",
+    "blockedDesc": "To change it, please contact the shop.",
+    "existingAppointment": "Current appointment",
+    "deliveryMissingOrder": "Missing order number for this delivery."
+  },
+  "waitingPickup": {
+    "badge": "Awaiting pickup",
+    "sectionTitle": "Upcoming pickups"
   },
   "days": [
     "SUN",
@@ -139,7 +152,8 @@
       "schedule": "Schedule Delivery",
       "scheduled": "Delivery scheduled",
       "locked": "Payment required",
-      "appointmentOn": "Delivery on"
+      "appointmentOn": "Delivery on",
+      "completed": "Delivered"
     },
     "note": "Note"
   }
