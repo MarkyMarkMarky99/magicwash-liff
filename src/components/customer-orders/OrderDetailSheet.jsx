@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getOrderById } from '../../api/orderApi';
 import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
+import DateChip from '../ui/DateChip';
 
 export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPhotos, onScheduleDelivery }) {
   const { t, i18n } = useTranslation();
@@ -114,27 +115,26 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
           onPointerCancel={handleDragEnd}
         >
           <div className="min-w-0 flex-1">
-            <p className="font-label text-[8px] text-on-surface-variant font-bold uppercase tracking-widest mb-0.5">{t('activeOrder.orderNumber')}</p>
-            <h2 className="font-headline font-bold text-[18px] text-on-surface leading-tight truncate">{orderId}</h2>
+            <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide mb-0.5">{t('activeOrder.orderNumber')}</p>
+            <h2 className="font-headline font-bold text-[22px] text-on-surface leading-tight truncate">{orderId}</h2>
           </div>
+          {status === 'done' && order && (
+            <div className="shrink-0 min-w-[112px] flex flex-col items-end gap-2 pt-0.5">
+              <DateChip
+                label={t('activeOrder.receivedDate')}
+                value={formatDisplayDate(order.receivedDate, undefined, dateLocale)}
+              />
+              <DateChip
+                label={t('activeOrder.dueDate')}
+                value={formatDisplayDate(order.dueDate, undefined, dateLocale)}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Dates + view photos button — pinned below header, outside scroll */}
+        {/* Actions — pinned below header, outside scroll */}
         {status === 'done' && order && (
-          <div className="px-4 pt-3 pb-2 flex-none space-y-3">
-            <div className="flex items-stretch gap-2">
-              <div className="flex-1 bg-surface-container-low rounded-xl px-3 py-2.5">
-                <p className="font-label text-[9px] text-on-surface-variant uppercase tracking-wide mb-1">{t('activeOrder.receivedDate')}</p>
-                <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{formatDisplayDate(order.receivedDate, undefined, dateLocale)}</p>
-              </div>
-              <div className="flex items-center px-1">
-                <span className="material-symbols-outlined text-outline text-[16px] leading-none">arrow_forward</span>
-              </div>
-              <div className="flex-1 bg-surface-container-low rounded-xl px-3 py-2.5">
-                <p className="font-label text-[9px] text-on-surface-variant uppercase tracking-wide mb-1">{t('activeOrder.dueDate')}</p>
-                <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{formatDisplayDate(order.dueDate, undefined, dateLocale)}</p>
-              </div>
-            </div>
+          <div className="px-4 pt-3 pb-2 flex-none">
             <div className="space-y-2">
               {order.status === 'COMPLETED' ? (
                 <div

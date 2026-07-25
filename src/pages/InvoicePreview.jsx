@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
 import { HeaderContext } from '../App';
+import DateChip from '../components/ui/DateChip';
 import { mockInvoiceViewRows } from '../mocks/invoiceView';
 
 const STATUS_STYLES = {
@@ -165,19 +166,6 @@ function SectionCard({ icon, title, badge, children }) {
   );
 }
 
-function DateChip({ label, value }) {
-  return (
-    <div className="flex items-center gap-2">
-      <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide whitespace-nowrap">
-        {label}
-      </p>
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 font-headline text-[11px] font-bold text-primary whitespace-nowrap">
-        {value}
-      </span>
-    </div>
-  );
-}
-
 function TotalRow({ label, value, tone = 'default' }) {
   const valueClass =
     tone === 'credit' ? 'text-green-700' :
@@ -334,19 +322,19 @@ export default function InvoicePreview({ invoiceNumber }) {
                   <li key={`${item.description}-${idx}`} className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-body text-sm text-on-surface font-medium leading-snug">
-                          {item.description}
-                        </p>
-                        <p className="font-body text-[11px] text-on-surface-variant leading-relaxed mt-0.5">
-                          {item.quantity ?? '—'}{item.unit ? ` ${item.unit}` : ''} × {formatMoney(item.unitPrice, currency)}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="font-body text-sm text-on-surface font-medium leading-snug truncate">
+                            {item.description}
+                          </p>
                           {item.serviceType && (
-                            <span className="inline-flex items-center px-2 py-px rounded-full bg-surface-container font-label text-[9px] font-bold text-on-surface-variant">
+                            <span className="inline-flex items-center px-2 py-px rounded-full bg-surface-container font-label text-[9px] font-bold text-on-surface-variant shrink-0">
                               {item.serviceType}
                             </span>
                           )}
                         </div>
+                        <p className="font-body text-[11px] text-on-surface-variant leading-relaxed mt-0.5">
+                          {item.quantity ?? '—'}{item.unit ? ` ${item.unit}` : ''} × {formatMoney(item.unitPrice, currency)}
+                        </p>
                       </div>
                       <span className="font-headline text-[13px] font-bold text-on-surface shrink-0">
                         {formatMoney(item.netTotal ?? item.subtotal, currency)}
@@ -390,24 +378,14 @@ export default function InvoicePreview({ invoiceNumber }) {
                 value={formatMoney(invoice.adjustmentTotal, currency)}
                 tone={(invoice.adjustmentTotal ?? 0) < 0 ? 'credit' : 'default'}
               />
+              <TotalRow label={t('invoice.totals.paid')} value={formatMoney(invoice.paidAmount, currency)} />
               <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-outline-variant/25">
                 <span className="font-headline text-[14px] font-bold text-on-surface leading-snug">
-                  {t('invoice.totals.grandTotal')}
+                  {t('invoice.totals.totalDue')}
                 </span>
-                <span className="font-headline text-[18px] font-bold text-primary shrink-0">
-                  {formatMoney(invoice.grandTotal, currency)}
+                <span className={`font-headline text-[18px] font-bold shrink-0 ${balanceDue > 0 ? 'text-error' : 'text-green-700'}`}>
+                  {formatMoney(invoice.balanceDue, currency)}
                 </span>
-              </div>
-              <div className="mt-2 pt-2 border-t border-outline-variant/25">
-                <TotalRow label={t('invoice.totals.paid')} value={formatMoney(invoice.paidAmount, currency)} />
-                <div className="flex items-center justify-between gap-3 pt-1">
-                  <span className="font-headline text-[13px] font-bold text-on-surface leading-snug">
-                    {t('invoice.totals.balanceDue')}
-                  </span>
-                  <span className={`font-headline text-[15px] font-bold shrink-0 ${balanceDue > 0 ? 'text-error' : 'text-green-700'}`}>
-                    {formatMoney(invoice.balanceDue, currency)}
-                  </span>
-                </div>
               </div>
             </div>
           </SectionCard>

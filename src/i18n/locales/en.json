@@ -122,7 +122,7 @@
       "adjustments": "Adjustments",
       "grandTotal": "Grand Total",
       "paid": "Amount paid",
-      "balanceDue": "Balance Due"
+      "totalDue": "Total Due"
     },
     "payments": {
       "title": "Payment History",
