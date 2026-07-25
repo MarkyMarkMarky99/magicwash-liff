@@ -1,4 +1,5 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef, useCallback, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
 import { HeaderContext } from '../App';
@@ -131,12 +132,11 @@ function readInvoice(row) {
     payments: parseArray(row.paymentsJson)
       .filter((p) => p && typeof p === 'object')
       .map((p) => ({
-        paymentId: toText(p.paymentId) ?? '—',
+        paymentId: toText(p.paymentId) ?? '—', // list key only — not shown to customers
         amount: toNumber(p.amount),
         method: toText(p.method) ?? 'OTHER',
         status: toText(p.status) ?? 'PENDING',
         paidAt: p.paidAt,
-        reference: toText(p.reference),
         proofUrl: safeUrl(p.proofUrl),
       })),
     subtotal: toNumber(row.subtotal),
@@ -147,22 +147,204 @@ function readInvoice(row) {
   };
 }
 
-function SectionCard({ icon, title, badge, children }) {
+/** Pill used for the header count badge — shared so the menu trigger matches it exactly. */
+const BADGE_PILL = 'flex items-center bg-surface-container rounded-full px-2.5 h-[22px] font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider shrink-0 whitespace-nowrap';
+
+/**
+ * Card with a static titled header. `action` replaces the plain badge when the
+ * count itself needs to be interactive; the header stays non-interactive.
+ * No `overflow-hidden` — an anchored menu must be able to escape the card.
+ */
+function SectionCard({ icon, title, badge, action, children }) {
   return (
-    <section className="bg-white w-full rounded-2xl overflow-hidden">
-      <div className="px-4 py-2 bg-surface-container-low text-primary flex items-center justify-between gap-2">
+    <section className="bg-white w-full rounded-2xl">
+      <div className="px-4 py-2 bg-surface-container-low text-primary flex items-center justify-between gap-2 rounded-t-2xl">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="material-symbols-outlined text-primary text-[16px]">{icon}</span>
+          <span className="material-symbols-outlined text-primary text-[16px]" aria-hidden="true">{icon}</span>
           <h2 className="font-headline font-bold text-[13px] tracking-tight truncate">{title}</h2>
         </div>
-        {badge && (
-          <span className="flex items-center bg-surface-container rounded-full px-2.5 h-[22px] font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider shrink-0 whitespace-nowrap">
-            {badge}
-          </span>
-        )}
+        {action ?? (badge && <span className={BADGE_PILL}>{badge}</span>)}
       </div>
       {children}
     </section>
+  );
+}
+
+/**
+ * The payment count badge, upgraded to a dropdown trigger.
+ *
+ * The panel is `fixed` and positioned below the trigger so it escapes both the
+ * card and the scrolling `<main>`. Dismisses on outside pointerdown, Escape, and scroll.
+ * `suspended` parks the dismiss listeners while the lightbox is on top, so the
+ * row that opened it stays mounted and can receive focus back.
+ */
+function PaymentsMenu({ payments, currency, dateLocale, suspended, onSelectProof }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
+  const panelId = useId();
+
+  const close = useCallback((refocus) => {
+    setOpen(false);
+    if (refocus) triggerRef.current?.focus();
+  }, []);
+
+  const handleToggle = () => {
+    if (open) { close(false); return; }
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const spaceBelow = window.innerHeight - r.bottom;
+    setPos({
+      right: Math.max(8, window.innerWidth - r.right),
+      top: r.bottom + 6,
+      maxHeight: Math.max(96, spaceBelow - 16),
+    });
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open || suspended) return;
+    const onPointerDown = (e) => {
+      if (panelRef.current?.contains(e.target) || triggerRef.current?.contains(e.target)) return;
+      close(false);
+    };
+    const onKeyDown = (e) => { if (e.key === 'Escape') close(true); };
+    const dismiss = () => close(false);
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('scroll', dismiss, true);
+    window.addEventListener('resize', dismiss);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('scroll', dismiss, true);
+      window.removeEventListener('resize', dismiss);
+    };
+  }, [open, suspended, close]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={handleToggle}
+        aria-expanded={open}
+        aria-haspopup="true"
+        aria-controls={open ? panelId : undefined}
+        className={`${BADGE_PILL} relative gap-1 pr-1.5 hover:bg-surface-container-high active:scale-95 transition-all focus:outline-none after:absolute after:content-[''] after:-inset-2`}
+      >
+        {payments.length} {t('invoice.payments.count')}
+        <span
+          className={`material-symbols-outlined text-[14px] leading-none transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        >
+          expand_more
+        </span>
+      </button>
+
+        {open && pos && createPortal(
+          <ul
+            ref={panelRef}
+            id={panelId}
+            style={pos}
+            className="fixed z-[60] w-64 py-1 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 overflow-y-auto no-scrollbar"
+          >
+            {payments.map((p, idx) => {
+              const methodLabel = t(`invoice.method.${p.method}`, { defaultValue: p.method });
+              const body = (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="material-symbols-outlined text-primary text-[16px] leading-none shrink-0"
+                      role="img"
+                      aria-label={methodLabel}
+                      title={methodLabel}
+                    >
+                      {METHOD_ICONS[p.method] ?? 'receipt_long'}
+                    </span>
+                    <span className="font-body text-[11px] text-on-surface-variant truncate">
+                      {formatDateTime(p.paidAt, dateLocale)}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-px rounded-full font-label text-[9px] font-bold shrink-0 ${PAYMENT_STATUS_STYLES[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {t(`invoice.paymentStatus.${p.status}`, { defaultValue: p.status })}
+                    </span>
+                  </span>
+                  <span className="font-headline text-[12px] font-bold text-on-surface shrink-0">
+                    {formatMoney(p.amount, currency)}
+                  </span>
+                </div>
+              );
+              return (
+                <li key={`${p.paymentId}-${idx}`}>
+                  {p.proofUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectProof(p.proofUrl)}
+                      className="w-full text-left px-3 py-2 transition-colors hover:bg-surface-container-low focus:bg-surface-container-low focus:outline-none active:bg-surface-container"
+                    >
+                      {body}
+                    </button>
+                  ) : (
+                    <div className="px-3 py-2">{body}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+/** Full-screen proof image. Dismisses on backdrop, close button, and Escape. */
+function ProofLightbox({ url, label, onClose }) {
+  const closeRef = useRef(null);
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    closeRef.current?.focus();
+    // Capture phase so Escape never reaches the dropdown's own handler underneath.
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      onClose();
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      if (previous instanceof HTMLElement) previous.focus();
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      onClick={onClose}
+      className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
+    >
+      <button
+        ref={closeRef}
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        className="absolute top-4 right-4 text-white/80 hover:text-white active:scale-95 transition-all focus:outline-none"
+      >
+        <span className="material-symbols-outlined text-[28px]" aria-hidden="true">close</span>
+      </button>
+      <img
+        src={url}
+        alt={label}
+        referrerPolicy="no-referrer"
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[80vh] max-w-full w-auto object-contain rounded-xl shadow-2xl"
+      />
+    </div>,
+    document.body,
   );
 }
 
@@ -184,16 +366,18 @@ export default function InvoicePreview({ invoiceNumber }) {
   const { t, i18n } = useTranslation();
   const setOnBack = useContext(HeaderContext);
   const [selected, setSelected] = useState(() => resolveInvoiceNumber(invoiceNumber, rows));
-  const [paymentsExpanded, setPaymentsExpanded] = useState(false);
+  const [proofUrl, setProofUrl] = useState(null); // open lightbox, or null
 
   useEffect(() => {
     setOnBack?.(null);
   }, [setOnBack]);
 
+  const closeProof = useCallback(() => setProofUrl(null), []);
+
   // Keep the URL shareable when the customer switches invoices.
   const handleSelect = (num) => {
     setSelected(num);
-    setPaymentsExpanded(false);
+    setProofUrl(null);
     const params = new URLSearchParams(window.location.search);
     params.set('invoiceNumber', num);
     window.history.replaceState(null, '', `${window.location.pathname}?${params}`);
@@ -216,6 +400,7 @@ export default function InvoicePreview({ invoiceNumber }) {
   const customerName = toText(invoice.customer.customerName);
   const customerIndex = toText(invoice.customer.customerIndex) ?? toNumber(invoice.customer.customerIndex);
   const balanceDue = invoice.balanceDue ?? 0;
+  const hasPayments = invoice.payments.length > 0;
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden font-body text-on-surface">
@@ -369,8 +554,23 @@ export default function InvoicePreview({ invoiceNumber }) {
             )}
           </SectionCard>
 
-          {/* Totals — shown exactly as stored on the invoice row */}
-          <SectionCard icon="calculate" title={t('invoice.totals.title')}>
+          {/* Totals — shown exactly as stored on the invoice row.
+              The payment count is the only interactive part of the header; it drops
+              down the payment list. Remounting on `selected` keeps it closed per invoice. */}
+          <SectionCard
+            icon="calculate"
+            title={t('invoice.totals.title')}
+            action={hasPayments ? (
+              <PaymentsMenu
+                key={selected}
+                payments={invoice.payments}
+                currency={currency}
+                dateLocale={dateLocale}
+                suspended={proofUrl != null}
+                onSelectProof={setProofUrl}
+              />
+            ) : null}
+          >
             <div className="px-4 py-3">
               <TotalRow label={t('invoice.totals.subtotal')} value={formatMoney(invoice.subtotal, currency)} />
               <TotalRow
@@ -390,83 +590,12 @@ export default function InvoicePreview({ invoiceNumber }) {
             </div>
           </SectionCard>
 
-          {/* Payment history */}
-          {invoice.payments.length > 0 && (
-            <section className="bg-white w-full rounded-2xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setPaymentsExpanded((expanded) => !expanded)}
-                aria-expanded={paymentsExpanded}
-                className="w-full px-4 py-3 bg-surface-container-low text-primary flex items-center justify-between gap-3 text-left transition-colors hover:bg-surface-container focus:outline-none"
-              >
-                <span className="flex items-center gap-2.5 min-w-0">
-                  <span className="material-symbols-outlined text-primary text-[17px]">receipt_long</span>
-                  <span className="font-headline font-bold text-[13px] tracking-tight truncate">
-                    {t('invoice.payments.title')}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2 shrink-0">
-                  <span className="bg-surface-container rounded-full px-2.5 h-[22px] inline-flex items-center font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider whitespace-nowrap">
-                    {invoice.payments.length} {t('invoice.payments.count')}
-                  </span>
-                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                    {paymentsExpanded ? 'expand_less' : 'expand_more'}
-                  </span>
-                </span>
-              </button>
-              {paymentsExpanded && (
-              <ul className="divide-y divide-outline-variant/10">
-                {invoice.payments.map((p, idx) => (
-                  <li key={`${p.paymentId}-${idx}`} className="px-4 py-3 flex gap-3">
-                    <div className="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant/10">
-                      <span className="material-symbols-outlined text-primary text-[18px]">
-                        {METHOD_ICONS[p.method] ?? 'receipt_long'}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-body text-[13px] text-on-surface font-medium leading-snug">
-                          {t(`invoice.method.${p.method}`, { defaultValue: p.method })}
-                        </p>
-                        <span className="font-headline text-[13px] font-bold text-on-surface shrink-0">
-                          {formatMoney(p.amount, currency)}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <span className={`inline-flex items-center px-2 py-px rounded-full font-label text-[9px] font-bold ${PAYMENT_STATUS_STYLES[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {t(`invoice.paymentStatus.${p.status}`, { defaultValue: p.status })}
-                        </span>
-                        <span className="font-body text-[10px] text-outline">{p.paymentId}</span>
-                      </div>
-                      <p className="font-body text-[11px] text-on-surface-variant leading-relaxed mt-1">
-                        {formatDateTime(p.paidAt, dateLocale)}
-                      </p>
-                      {p.reference && (
-                        <p className="font-body text-[11px] text-on-surface-variant leading-relaxed">
-                          {t('invoice.payments.reference')}: {p.reference}
-                        </p>
-                      )}
-                      {p.proofUrl && (
-                        <a
-                          href={p.proofUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 mt-1.5 font-headline text-[11px] font-bold text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
-                        >
-                          <span className="material-symbols-outlined text-[14px] leading-none">image</span>
-                          {t('invoice.payments.viewProof')}
-                        </a>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              )}
-            </section>
-          )}
-
         </div>
       </main>
+
+      {proofUrl && (
+        <ProofLightbox url={proofUrl} label={t('invoice.payments.viewProof')} onClose={closeProof} />
+      )}
     </div>
   );
 }
