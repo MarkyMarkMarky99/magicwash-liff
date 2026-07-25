@@ -100,6 +100,7 @@
     "status": {
       "DRAFT": "Draft",
       "UNPAID": "Unpaid",
+      "OVERDUE": "Overdue",
       "PARTIALLY_PAID": "Partially paid",
       "PAID": "Paid",
       "CANCELLED": "Cancelled",
@@ -134,13 +135,15 @@
     "paymentStatus": {
       "PENDING": "Pending",
       "VERIFIED": "Verified",
-      "FAILED": "Failed"
+      "FAILED": "Failed",
+      "CANCELLED": "Cancelled"
     },
     "method": {
       "CASH": "Cash",
       "BANK_TRANSFER": "Bank transfer",
       "CREDIT_CARD": "Credit card",
       "QR_PROMPTPAY": "PromptPay QR",
+      "GIFT_VOUCHER": "Gift voucher",
       "OTHER": "Other"
     }
   },

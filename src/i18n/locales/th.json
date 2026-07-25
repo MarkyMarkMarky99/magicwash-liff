@@ -92,6 +92,7 @@
     "status": {
       "DRAFT": "ฉบับร่าง",
       "UNPAID": "ยังไม่ชำระ",
+      "OVERDUE": "เกินกำหนด",
       "PARTIALLY_PAID": "ชำระบางส่วน",
       "PAID": "ชำระแล้ว",
       "CANCELLED": "ยกเลิก",
@@ -126,13 +127,15 @@
     "paymentStatus": {
       "PENDING": "รอตรวจสอบ",
       "VERIFIED": "ยืนยันแล้ว",
-      "FAILED": "ไม่สำเร็จ"
+      "FAILED": "ไม่สำเร็จ",
+      "CANCELLED": "ยกเลิก"
     },
     "method": {
       "CASH": "เงินสด",
       "BANK_TRANSFER": "โอนผ่านธนาคาร",
       "CREDIT_CARD": "บัตรเครดิต",
       "QR_PROMPTPAY": "พร้อมเพย์ QR",
+      "GIFT_VOUCHER": "บัตรกำนัล",
       "OTHER": "อื่น ๆ"
     }
   },

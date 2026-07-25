@@ -2,45 +2,75 @@
 // Nested documents are stored as JSON strings in Google Sheets.
 
 export const columns = [
-  'invoiceNumber', 'status', 'issuedDate', 'dueDate',
-  'customerJson', 'sourceOrderIdsJson', 'itemsJson', 'paymentsJson',
-  'currency', 'subtotal', 'adjustmentTotal', 'grandTotal',
-  'paidAmount', 'balanceDue',
+  'invoiceNumber',
+  'status',
+  'billingType',
+  'billingPeriodStart',
+  'billingPeriodEnd',
+  'issuedDate',
+  'dueDate',
+  'customerJson',
+  'itemsJson',
+  'adjustmentsJson',
+  'paymentsJson',
+  'subtotal',
+  'adjustmentTotal',
+  'grandTotal',
+  'paidAmount',
+  'balanceDue',
 ];
 
-export const dateColumns = new Set(['issuedDate', 'dueDate']);
+export const dateColumns = new Set([
+  'billingPeriodStart',
+  'billingPeriodEnd',
+  'issuedDate',
+  'dueDate',
+]);
 
 export const schema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   title: 'InvoiceView',
+  description: 'Customer-facing invoice data, preprocessed from Invoices, InvoiceItems, and Payments.',
   type: 'object',
-  required: [
-    'invoiceNumber', 'status', 'issuedDate', 'dueDate',
-    'customerJson', 'sourceOrderIdsJson', 'itemsJson', 'paymentsJson',
-    'currency', 'subtotal', 'adjustmentTotal', 'grandTotal',
-    'paidAmount', 'balanceDue',
-  ],
+  required: columns,
   additionalProperties: false,
   properties: {
-    invoiceNumber:      { type: 'string' },
+    invoiceNumber: {
+      type: 'string',
+      description: 'Customer-facing invoice number.',
+    },
     status: {
       type: 'string',
-      enum: ['DRAFT', 'UNPAID', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'VOID'],
+      enum: ['DRAFT', 'UNPAID', 'OVERDUE', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'VOID'],
+      description: 'Display status derived from invoice lifecycle, due date, totals, and verified payments.',
     },
-    issuedDate:         { type: 'string', format: 'date' },
-    dueDate:            { type: 'string', format: 'date' },
+    billingType: {
+      type: 'string',
+      enum: ['ORDER', 'CYCLE'],
+      description: 'ORDER is one order per invoice. CYCLE combines orders within a billing period.',
+    },
+    billingPeriodStart: {
+      type: ['string', 'null'],
+      format: 'date',
+      description: 'Start date of a CYCLE billing period, otherwise null.',
+    },
+    billingPeriodEnd: {
+      type: ['string', 'null'],
+      format: 'date',
+      description: 'End date of a CYCLE billing period, otherwise null.',
+    },
+    issuedDate: {
+      type: 'string',
+      format: 'date',
+    },
+    dueDate: {
+      type: 'string',
+      format: 'date',
+    },
     customerJson: {
       type: 'string',
       contentMediaType: 'application/json',
       contentSchema: { $ref: '#/$defs/customer' },
-    },
-    sourceOrderIdsJson: {
-      type: 'string',
-      contentMediaType: 'application/json',
-      contentSchema: {
-        type: 'array',
-        items: { type: 'string' },
-      },
     },
     itemsJson: {
       type: 'string',
@@ -50,6 +80,15 @@ export const schema = {
         items: { $ref: '#/$defs/item' },
       },
     },
+    adjustmentsJson: {
+      type: 'string',
+      contentMediaType: 'application/json',
+      contentSchema: {
+        type: 'array',
+        items: { $ref: '#/$defs/adjustment' },
+      },
+      description: 'Resolved invoice-level adjustments. Item-level adjustments remain with their item.',
+    },
     paymentsJson: {
       type: 'string',
       contentMediaType: 'application/json',
@@ -58,24 +97,87 @@ export const schema = {
         items: { $ref: '#/$defs/payment' },
       },
     },
-    currency:           { type: 'string', pattern: '^[A-Z]{3}$' },
-    subtotal:           { type: 'number' },
-    adjustmentTotal:    { type: 'number' },
-    grandTotal:         { type: 'number' },
-    paidAmount:         { type: 'number', minimum: 0 },
-    balanceDue:         { type: 'number' },
+    subtotal: {
+      type: 'number',
+      description: 'Sum of item subtotals before item-level and invoice-level adjustments.',
+    },
+    adjustmentTotal: {
+      type: 'number',
+      description: 'Sum of resolved item-level and invoice-level adjustment amounts.',
+    },
+    grandTotal: {
+      type: 'number',
+      description: 'Invoice total after all adjustments.',
+    },
+    paidAmount: {
+      type: 'number',
+      description: 'Sum of signed VERIFIED payment amounts. Refunds reduce this value.',
+    },
+    balanceDue: {
+      type: 'number',
+      description: 'Amount still due after verified payments, or zero for cancelled and void invoices.',
+    },
   },
+  allOf: [
+    {
+      if: {
+        properties: {
+          billingType: { const: 'CYCLE' },
+        },
+        required: ['billingType'],
+      },
+      then: {
+        properties: {
+          billingPeriodStart: { type: 'string' },
+          billingPeriodEnd: { type: 'string' },
+        },
+      },
+      else: {
+        properties: {
+          billingPeriodStart: { type: 'null' },
+          billingPeriodEnd: { type: 'null' },
+        },
+      },
+    },
+  ],
   $defs: {
     customer: {
       type: 'object',
-      required: ['customerName'],
+      required: ['customerCode', 'customerName'],
       additionalProperties: false,
       properties: {
-        customerIndex: { type: ['string', 'number', 'null'] },
-        customerName:  { type: 'string' },
-        phone:         { type: ['string', 'null'] },
-        email:         { type: ['string', 'null'], format: 'email' },
-        address:       { type: ['string', 'null'] },
+        customerCode: {
+          type: 'string',
+          minLength: 1,
+        },
+        customerName: {
+          type: 'string',
+          minLength: 1,
+        },
+        taxId: {
+          type: ['string', 'null'],
+          pattern: '^[0-9]{13}$',
+        },
+        branchCode: {
+          type: ['string', 'null'],
+          pattern: '^[0-9]{5}$',
+        },
+        contactName: {
+          type: ['string', 'null'],
+        },
+        phone: {
+          type: ['string', 'null'],
+        },
+        email: {
+          type: ['string', 'null'],
+          format: 'email',
+        },
+        address: {
+          type: ['string', 'null'],
+        },
+      },
+      dependentRequired: {
+        branchCode: ['taxId'],
       },
     },
     adjustment: {
@@ -83,50 +185,90 @@ export const schema = {
       required: ['label', 'amount'],
       additionalProperties: false,
       properties: {
-        label:  { type: 'string' },
-        amount: { type: 'number' },
+        label: {
+          type: 'string',
+          minLength: 1,
+        },
+        amount: {
+          type: 'number',
+          not: { const: 0 },
+          description: 'Resolved signed amount ready for display.',
+        },
       },
     },
     item: {
       type: 'object',
       required: [
-        'description', 'quantity', 'unitPrice',
-        'subtotal', 'adjustments', 'netTotal',
+        'description',
+        'quantity',
+        'unitPrice',
+        'subtotal',
+        'adjustments',
+        'netTotal',
       ],
       additionalProperties: false,
       properties: {
-        sourceOrderId: { type: ['string', 'null'] },
-        serviceType:   { type: ['string', 'null'] },
-        description:   { type: 'string' },
-        quantity:      { type: 'number' },
-        unit:          { type: ['string', 'null'] },
-        unitPrice:     { type: 'number' },
-        subtotal:      { type: 'number' },
+        serviceType: {
+          type: ['string', 'null'],
+        },
+        description: {
+          type: 'string',
+        },
+        quantity: {
+          type: 'number',
+          exclusiveMinimum: 0,
+        },
+        unit: {
+          type: ['string', 'null'],
+        },
+        unitPrice: {
+          type: 'number',
+        },
+        subtotal: {
+          type: 'number',
+        },
         adjustments: {
           type: 'array',
           items: { $ref: '#/$defs/adjustment' },
         },
-        netTotal:      { type: 'number' },
+        netTotal: {
+          type: 'number',
+        },
       },
     },
     payment: {
       type: 'object',
-      required: ['paymentId', 'amount', 'method', 'status'],
+      required: ['amount', 'method', 'status'],
       additionalProperties: false,
       properties: {
-        paymentId: { type: 'string' },
-        amount:    { type: 'number', minimum: 0 },
+        amount: {
+          type: 'number',
+          not: { const: 0 },
+          description: 'Positive for money received and negative for a refund or reversal.',
+        },
         method: {
           type: 'string',
-          enum: ['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'QR_PROMPTPAY', 'OTHER'],
+          enum: [
+            'CASH',
+            'BANK_TRANSFER',
+            'CREDIT_CARD',
+            'QR_PROMPTPAY',
+            'GIFT_VOUCHER',
+            'OTHER',
+          ],
         },
         status: {
           type: 'string',
-          enum: ['PENDING', 'VERIFIED', 'FAILED'],
+          enum: ['PENDING', 'VERIFIED', 'FAILED', 'CANCELLED'],
         },
-        paidAt:   { type: ['string', 'null'], format: 'date-time' },
-        reference: { type: ['string', 'null'] },
-        proofUrl:  { type: ['string', 'null'], format: 'uri' },
+        paidAt: {
+          type: ['string', 'null'],
+          format: 'date-time',
+        },
+        proofUrl: {
+          type: ['string', 'null'],
+          format: 'uri',
+        },
       },
     },
   },

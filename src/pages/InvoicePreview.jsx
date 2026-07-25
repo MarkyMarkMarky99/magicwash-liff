@@ -9,6 +9,7 @@ import { mockInvoiceViewRows } from '../mocks/invoiceView';
 const STATUS_STYLES = {
   DRAFT:          { badge: 'bg-gray-100 text-gray-600',                icon: 'draft' },
   UNPAID:         { badge: 'bg-amber-100 text-amber-700',              icon: 'schedule' },
+  OVERDUE:        { badge: 'bg-error-container text-on-error-container', icon: 'event_busy' },
   PARTIALLY_PAID: { badge: 'bg-blue-100 text-blue-700',                icon: 'donut_large' },
   PAID:           { badge: 'bg-green-100 text-green-700',              icon: 'task_alt' },
   CANCELLED:      { badge: 'bg-error-container text-on-error-container', icon: 'cancel' },
@@ -19,6 +20,7 @@ const PAYMENT_STATUS_STYLES = {
   PENDING:  'bg-amber-100 text-amber-700',
   VERIFIED: 'bg-green-100 text-green-700',
   FAILED:   'bg-error-container text-on-error-container',
+  CANCELLED: 'bg-gray-100 text-gray-600',
 };
 
 const METHOD_ICONS = {
@@ -26,6 +28,7 @@ const METHOD_ICONS = {
   BANK_TRANSFER: 'account_balance',
   CREDIT_CARD:   'credit_card',
   QR_PROMPTPAY:  'qr_code_2',
+  GIFT_VOUCHER:  'redeem',
   OTHER:         'receipt_long',
 };
 
@@ -106,14 +109,16 @@ function resolveInvoiceNumber(raw, rows) {
 /** Normalises one raw sheet row into the shape the UI renders. */
 function readInvoice(row) {
   if (!row) return null;
-  const currency = /^[A-Z]{3}$/.test(String(row.currency)) ? row.currency : 'THB';
 
   return {
     invoiceNumber: toText(row.invoiceNumber) ?? '—',
     status: toText(row.status) ?? 'DRAFT',
+    billingType: toText(row.billingType) ?? 'ORDER',
+    billingPeriodStart: row.billingPeriodStart,
+    billingPeriodEnd: row.billingPeriodEnd,
     issuedDate: row.issuedDate,
     dueDate: row.dueDate,
-    currency,
+    currency: 'THB',
     customer: parseObject(row.customerJson) ?? {},
     items: parseArray(row.itemsJson)
       .filter((i) => i && typeof i === 'object')
@@ -129,10 +134,12 @@ function readInvoice(row) {
           .filter((a) => a && typeof a === 'object')
           .map((a) => ({ label: toText(a.label) ?? '—', amount: toNumber(a.amount) })),
       })),
+    adjustments: parseArray(row.adjustmentsJson)
+      .filter((a) => a && typeof a === 'object')
+      .map((a) => ({ label: toText(a.label) ?? '—', amount: toNumber(a.amount) })),
     payments: parseArray(row.paymentsJson)
       .filter((p) => p && typeof p === 'object')
       .map((p) => ({
-        paymentId: toText(p.paymentId) ?? '—', // list key only — not shown to customers
         amount: toNumber(p.amount),
         method: toText(p.method) ?? 'OTHER',
         status: toText(p.status) ?? 'PENDING',
@@ -277,7 +284,7 @@ function PaymentsMenu({ payments, currency, dateLocale, suspended, onSelectProof
                 </div>
               );
               return (
-                <li key={`${p.paymentId}-${idx}`}>
+                <li key={`${p.paidAt ?? p.method}-${idx}`}>
                   {p.proofUrl ? (
                     <button
                       type="button"
@@ -398,8 +405,9 @@ export default function InvoicePreview({ invoiceNumber }) {
   const { currency } = invoice;
   const statusCfg = STATUS_STYLES[invoice.status] ?? { badge: 'bg-gray-100 text-gray-600', icon: 'receipt_long' };
   const customerName = toText(invoice.customer.customerName);
-  const customerIndex = toText(invoice.customer.customerIndex) ?? toNumber(invoice.customer.customerIndex);
+  const customerCode = toText(invoice.customer.customerCode);
   const balanceDue = invoice.balanceDue ?? 0;
+  const paidAmountForDisplay = invoice.paidAmount > 0 ? -invoice.paidAmount : invoice.paidAmount;
   const hasPayments = invoice.payments.length > 0;
 
   return (
@@ -463,9 +471,9 @@ export default function InvoicePreview({ invoiceNumber }) {
               <h3 className="font-headline font-bold text-[15px] text-primary leading-snug">
                 {customerName ?? '–'}
               </h3>
-              {customerIndex != null && (
+              {customerCode && (
                 <p className="font-label text-[10px] text-on-surface-variant font-bold tracking-wide mt-0.5">
-                  {t('invoice.customerNo')} · {customerIndex}
+                  {t('invoice.customerNo')} · {customerCode}
                 </p>
               )}
               {toText(invoice.customer.phone) && (
@@ -528,14 +536,6 @@ export default function InvoicePreview({ invoiceNumber }) {
 
                     {item.adjustments.length > 0 && (
                       <div className="mt-2 pl-3 border-l-2 border-outline-variant/30 space-y-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <span className="font-body text-[11px] text-on-surface-variant leading-relaxed">
-                            {t('invoice.totals.subtotal')}
-                          </span>
-                          <span className="font-body text-[11px] text-on-surface-variant shrink-0">
-                            {formatMoney(item.subtotal, currency)}
-                          </span>
-                        </div>
                         {item.adjustments.map((adj, aIdx) => (
                           <div key={`${adj.label}-${aIdx}`} className="flex items-start justify-between gap-3">
                             <span className="font-body text-[11px] text-on-surface-variant leading-relaxed">
@@ -578,7 +578,11 @@ export default function InvoicePreview({ invoiceNumber }) {
                 value={formatMoney(invoice.adjustmentTotal, currency)}
                 tone={(invoice.adjustmentTotal ?? 0) < 0 ? 'credit' : 'default'}
               />
-              <TotalRow label={t('invoice.totals.paid')} value={formatMoney(invoice.paidAmount, currency)} />
+              <TotalRow
+                label={t('invoice.totals.paid')}
+                value={formatMoney(paidAmountForDisplay, currency)}
+                tone={paidAmountForDisplay < 0 ? 'credit' : 'default'}
+              />
               <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-outline-variant/25">
                 <span className="font-headline text-[14px] font-bold text-on-surface leading-snug">
                   {t('invoice.totals.totalDue')}
