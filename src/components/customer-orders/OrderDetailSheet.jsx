@@ -135,11 +135,11 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
                 <p className="font-headline font-bold text-[13px] text-on-surface leading-tight">{formatDisplayDate(order.dueDate, undefined, dateLocale)}</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="space-y-2">
               {order.status === 'COMPLETED' ? (
                 <div
                   aria-disabled="true"
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-container text-on-surface-variant font-label text-[12px] font-semibold cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-container text-on-surface-variant font-label text-[12px] font-semibold cursor-not-allowed"
                 >
                   <span className="material-symbols-outlined text-[16px] leading-none">task_alt</span>
                   {t('activeOrder.delivery.completed')}
@@ -147,19 +147,30 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
               ) : (
                 <button
                   onClick={() => onScheduleDelivery?.(orderId)}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
                 >
                   <span className="material-symbols-outlined text-[16px] leading-none">local_shipping</span>
                   {t('activeOrder.delivery.schedule')}
                 </button>
               )}
-              <button
-                onClick={() => onViewPhotos?.(orderId)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
-              >
-                <span className="material-symbols-outlined text-[16px] leading-none">photo_library</span>
-                {t('customerOrders.viewPhotos')}
-              </button>
+              <div className="flex gap-2">
+                <a
+                  href={`https://magicwash-laundry.com/order?ord=${encodeURIComponent(orderId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary text-primary hover:bg-primary/5 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
+                >
+                  <span className="material-symbols-outlined text-[16px] leading-none">receipt_long</span>
+                  {t('customerOrders.viewInvoice')}
+                </a>
+                <button
+                  onClick={() => onViewPhotos?.(orderId)}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
+                >
+                  <span className="material-symbols-outlined text-[16px] leading-none">photo_library</span>
+                  {t('customerOrders.viewPhotos')}
+                </button>
+              </div>
             </div>
           </div>
         )}

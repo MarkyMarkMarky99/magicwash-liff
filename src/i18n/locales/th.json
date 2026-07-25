@@ -73,6 +73,7 @@
     "schedulePickup": "นัดรับผ้า",
     "orderDetails": "รายละเอียดออเดอร์",
     "viewPhotos": "ดูรูปภาพทั้งหมด",
+    "viewInvoice": "ดูใบแจ้งหนี้",
     "loadError": "โหลดข้อมูลไม่สำเร็จ",
     "items": "รายการ",
     "orderHistory": "ประวัติออเดอร์",

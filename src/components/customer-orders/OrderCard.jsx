@@ -51,17 +51,31 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
           </span>
         </div>
 
-        {/* Row 2: notes / serviceType + photo icon */}
+        {/* Row 2: notes / serviceType + invoice + photo icons */}
         <div className="flex items-center justify-between gap-2">
           <p className="font-body text-xs text-on-surface-variant truncate">
             {order.note || order.serviceType || ''}
           </p>
-          <button
-            onClick={(e) => { e.stopPropagation(); onViewPhotos?.(order.orderId); }}
-            className="shrink-0 text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
-          >
-            <span className="material-symbols-outlined text-[14px]">photo_library</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href={`https://magicwash-laundry.com/order?ord=${encodeURIComponent(order.orderId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={t('customerOrders.viewInvoice')}
+              className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+            >
+              <span className="material-symbols-outlined text-[14px]">receipt_long</span>
+            </a>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onViewPhotos?.(order.orderId); }}
+              aria-label={t('customerOrders.viewPhotos')}
+              className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+            >
+              <span className="material-symbols-outlined text-[14px]">photo_library</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
