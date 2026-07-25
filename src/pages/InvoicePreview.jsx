@@ -113,11 +113,9 @@ function readInvoice(row) {
     dueDate: row.dueDate,
     currency,
     customer: parseObject(row.customerJson) ?? {},
-    sourceOrderIds: parseArray(row.sourceOrderIdsJson).map(toText).filter(Boolean),
     items: parseArray(row.itemsJson)
       .filter((i) => i && typeof i === 'object')
       .map((i) => ({
-        sourceOrderId: toText(i.sourceOrderId),
         serviceType: toText(i.serviceType),
         description: toText(i.description) ?? '—',
         quantity: toNumber(i.quantity),
@@ -198,6 +196,7 @@ export default function InvoicePreview({ invoiceNumber }) {
   const { t, i18n } = useTranslation();
   const setOnBack = useContext(HeaderContext);
   const [selected, setSelected] = useState(() => resolveInvoiceNumber(invoiceNumber, rows));
+  const [paymentsExpanded, setPaymentsExpanded] = useState(false);
 
   useEffect(() => {
     setOnBack?.(null);
@@ -206,6 +205,7 @@ export default function InvoicePreview({ invoiceNumber }) {
   // Keep the URL shareable when the customer switches invoices.
   const handleSelect = (num) => {
     setSelected(num);
+    setPaymentsExpanded(false);
     const params = new URLSearchParams(window.location.search);
     params.set('invoiceNumber', num);
     window.history.replaceState(null, '', `${window.location.pathname}?${params}`);
@@ -239,7 +239,7 @@ export default function InvoicePreview({ invoiceNumber }) {
             <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide mb-1.5">
               {t('invoice.selectLabel')}
             </p>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
               {rows.map((row) => {
                 const num = row.invoiceNumber;
                 const active = num === selected;
@@ -261,23 +261,21 @@ export default function InvoicePreview({ invoiceNumber }) {
             </div>
           </div>
 
-          {/* Invoice number + status + dates */}
-          <section className="space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide mb-0.5">
-                  {t('invoice.invoiceNumber')}
-                </p>
-                <h2 className="font-headline font-bold text-[22px] text-on-surface leading-tight truncate">
-                  {invoice.invoiceNumber}
-                </h2>
-              </div>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label text-[10px] font-bold shrink-0 mt-1 ${statusCfg.badge}`}>
+          {/* Invoice number + status on the left, dates on the right */}
+          <section className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide mb-0.5">
+                {t('invoice.invoiceNumber')}
+              </p>
+              <h2 className="font-headline font-bold text-[22px] text-on-surface leading-tight truncate">
+                {invoice.invoiceNumber}
+              </h2>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label text-[10px] font-bold mt-2 ${statusCfg.badge}`}>
                 <span className="material-symbols-outlined text-[14px] leading-none">{statusCfg.icon}</span>
                 {t(`invoice.status.${invoice.status}`, { defaultValue: invoice.status })}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <div className="shrink-0 min-w-[112px] flex flex-col items-end gap-2 pt-0.5">
               <DateChip label={t('invoice.issuedDate')} value={formatDisplayDate(invoice.issuedDate, undefined, dateLocale)} />
               <DateChip label={t('invoice.dueDate')} value={formatDisplayDate(invoice.dueDate, undefined, dateLocale)} />
             </div>
@@ -288,69 +286,37 @@ export default function InvoicePreview({ invoiceNumber }) {
             <p className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface px-3 font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide whitespace-nowrap">
               {t('invoice.billedTo')}
             </p>
-            <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 overflow-hidden">
-                <span className="material-symbols-outlined fill-icon text-[44px] text-outline-variant translate-y-1">
-                  account_circle
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-headline font-bold text-[15px] text-primary leading-snug">
-                  {customerName ?? '–'}
-                </h3>
-                {customerIndex != null && (
-                  <p className="font-label text-[10px] text-on-surface-variant font-bold tracking-wide mt-0.5">
-                    {t('invoice.customerNo')} · {customerIndex}
+            <div className="min-w-0">
+              <h3 className="font-headline font-bold text-[15px] text-primary leading-snug">
+                {customerName ?? '–'}
+              </h3>
+              {customerIndex != null && (
+                <p className="font-label text-[10px] text-on-surface-variant font-bold tracking-wide mt-0.5">
+                  {t('invoice.customerNo')} · {customerIndex}
+                </p>
+              )}
+              {toText(invoice.customer.phone) && (
+                <div className="flex items-center gap-1 mt-1">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none">call</span>
+                  <p className="font-body text-[11px] text-on-surface-variant">{invoice.customer.phone}</p>
+                </div>
+              )}
+              {toText(invoice.customer.email) && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none">mail</span>
+                  <p className="font-body text-[11px] text-on-surface-variant truncate">{invoice.customer.email}</p>
+                </div>
+              )}
+              {toText(invoice.customer.address) && (
+                <div className="flex items-start gap-1 mt-0.5">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none mt-px">location_on</span>
+                  <p className="font-body text-[11px] text-on-surface-variant leading-relaxed">
+                    {invoice.customer.address}
                   </p>
-                )}
-                {toText(invoice.customer.phone) && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none">call</span>
-                    <p className="font-body text-[11px] text-on-surface-variant">{invoice.customer.phone}</p>
-                  </div>
-                )}
-                {toText(invoice.customer.email) && (
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none">mail</span>
-                    <p className="font-body text-[11px] text-on-surface-variant truncate">{invoice.customer.email}</p>
-                  </div>
-                )}
-                {toText(invoice.customer.address) && (
-                  <div className="flex items-start gap-1 mt-0.5">
-                    <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none mt-px">location_on</span>
-                    <p className="font-body text-[11px] text-on-surface-variant leading-relaxed">
-                      {invoice.customer.address}
-                    </p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </section>
-
-          {/* Source orders */}
-          <SectionCard
-            icon="inventory_2"
-            title={t('invoice.sourceOrders.title')}
-            badge={`${invoice.sourceOrderIds.length} ${t('invoice.sourceOrders.count')}`}
-          >
-            {invoice.sourceOrderIds.length === 0 ? (
-              <p className="px-4 py-4 font-body text-[13px] text-on-surface-variant italic">
-                {t('invoice.sourceOrders.empty')}
-              </p>
-            ) : (
-              <div className="px-4 py-3 flex flex-wrap gap-2">
-                {invoice.sourceOrderIds.map((id) => (
-                  <span
-                    key={id}
-                    className="inline-flex items-center gap-1.5 px-2.5 h-7 rounded-full bg-primary/10 font-headline text-[11px] font-bold text-primary"
-                  >
-                    <span className="material-symbols-outlined text-[14px] leading-none">local_laundry_service</span>
-                    {id}
-                  </span>
-                ))}
-              </div>
-            )}
-          </SectionCard>
 
           {/* Charges */}
           <SectionCard
@@ -365,7 +331,7 @@ export default function InvoicePreview({ invoiceNumber }) {
             ) : (
               <ul className="divide-y divide-outline-variant/10">
                 {invoice.items.map((item, idx) => (
-                  <li key={`${item.sourceOrderId ?? 'item'}-${idx}`} className="px-4 py-3">
+                  <li key={`${item.description}-${idx}`} className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="font-body text-sm text-on-surface font-medium leading-snug">
@@ -380,18 +346,23 @@ export default function InvoicePreview({ invoiceNumber }) {
                               {item.serviceType}
                             </span>
                           )}
-                          {item.sourceOrderId && (
-                            <span className="font-body text-[10px] text-outline">{item.sourceOrderId}</span>
-                          )}
                         </div>
                       </div>
-                      <span className="font-body text-[13px] text-on-surface-variant shrink-0">
-                        {formatMoney(item.subtotal, currency)}
+                      <span className="font-headline text-[13px] font-bold text-on-surface shrink-0">
+                        {formatMoney(item.netTotal ?? item.subtotal, currency)}
                       </span>
                     </div>
 
                     {item.adjustments.length > 0 && (
                       <div className="mt-2 pl-3 border-l-2 border-outline-variant/30 space-y-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-body text-[11px] text-on-surface-variant leading-relaxed">
+                            {t('invoice.totals.subtotal')}
+                          </span>
+                          <span className="font-body text-[11px] text-on-surface-variant shrink-0">
+                            {formatMoney(item.subtotal, currency)}
+                          </span>
+                        </div>
                         {item.adjustments.map((adj, aIdx) => (
                           <div key={`${adj.label}-${aIdx}`} className="flex items-start justify-between gap-3">
                             <span className="font-body text-[11px] text-on-surface-variant leading-relaxed">
@@ -404,17 +375,6 @@ export default function InvoicePreview({ invoiceNumber }) {
                         ))}
                       </div>
                     )}
-
-                    {item.adjustments.length > 0 && (
-                      <div className="flex items-center justify-between gap-3 mt-2">
-                        <span className="font-label text-[10px] text-on-surface-variant font-bold uppercase tracking-wide">
-                          {t('invoice.items.netTotal')}
-                        </span>
-                        <span className="font-headline text-[13px] font-bold text-on-surface shrink-0">
-                          {formatMoney(item.netTotal, currency)}
-                        </span>
-                      </div>
-                    )}
                   </li>
                 ))}
               </ul>
@@ -422,48 +382,61 @@ export default function InvoicePreview({ invoiceNumber }) {
           </SectionCard>
 
           {/* Totals — shown exactly as stored on the invoice row */}
-          <section className="bg-white rounded-2xl px-4 py-3">
-            <p className="font-label text-[10px] text-primary font-bold uppercase tracking-wide mb-2">
-              {t('invoice.totals.title')}
-            </p>
-            <TotalRow label={t('invoice.totals.subtotal')} value={formatMoney(invoice.subtotal, currency)} />
-            <TotalRow
-              label={t('invoice.totals.adjustments')}
-              value={formatMoney(invoice.adjustmentTotal, currency)}
-              tone={(invoice.adjustmentTotal ?? 0) < 0 ? 'credit' : 'default'}
-            />
-            <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-outline-variant/25">
-              <span className="font-headline text-[14px] font-bold text-on-surface leading-snug">
-                {t('invoice.totals.grandTotal')}
-              </span>
-              <span className="font-headline text-[18px] font-bold text-primary shrink-0">
-                {formatMoney(invoice.grandTotal, currency)}
-              </span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-outline-variant/25">
-              <TotalRow label={t('invoice.totals.paid')} value={formatMoney(invoice.paidAmount, currency)} />
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <span className="font-headline text-[13px] font-bold text-on-surface leading-snug">
-                  {t('invoice.totals.balanceDue')}
+          <SectionCard icon="calculate" title={t('invoice.totals.title')}>
+            <div className="px-4 py-3">
+              <TotalRow label={t('invoice.totals.subtotal')} value={formatMoney(invoice.subtotal, currency)} />
+              <TotalRow
+                label={t('invoice.totals.adjustments')}
+                value={formatMoney(invoice.adjustmentTotal, currency)}
+                tone={(invoice.adjustmentTotal ?? 0) < 0 ? 'credit' : 'default'}
+              />
+              <div className="flex items-center justify-between gap-3 mt-2 pt-2 border-t border-outline-variant/25">
+                <span className="font-headline text-[14px] font-bold text-on-surface leading-snug">
+                  {t('invoice.totals.grandTotal')}
                 </span>
-                <span className={`font-headline text-[15px] font-bold shrink-0 ${balanceDue > 0 ? 'text-error' : 'text-green-700'}`}>
-                  {formatMoney(invoice.balanceDue, currency)}
+                <span className="font-headline text-[18px] font-bold text-primary shrink-0">
+                  {formatMoney(invoice.grandTotal, currency)}
                 </span>
               </div>
+              <div className="mt-2 pt-2 border-t border-outline-variant/25">
+                <TotalRow label={t('invoice.totals.paid')} value={formatMoney(invoice.paidAmount, currency)} />
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <span className="font-headline text-[13px] font-bold text-on-surface leading-snug">
+                    {t('invoice.totals.balanceDue')}
+                  </span>
+                  <span className={`font-headline text-[15px] font-bold shrink-0 ${balanceDue > 0 ? 'text-error' : 'text-green-700'}`}>
+                    {formatMoney(invoice.balanceDue, currency)}
+                  </span>
+                </div>
+              </div>
             </div>
-          </section>
+          </SectionCard>
 
           {/* Payment history */}
-          <SectionCard
-            icon="receipt_long"
-            title={t('invoice.payments.title')}
-            badge={`${invoice.payments.length} ${t('invoice.payments.count')}`}
-          >
-            {invoice.payments.length === 0 ? (
-              <p className="px-4 py-4 font-body text-[13px] text-on-surface-variant italic">
-                {t('invoice.payments.empty')}
-              </p>
-            ) : (
+          {invoice.payments.length > 0 && (
+            <section className="bg-white w-full rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setPaymentsExpanded((expanded) => !expanded)}
+                aria-expanded={paymentsExpanded}
+                className="w-full px-4 py-3 bg-surface-container-low text-primary flex items-center justify-between gap-3 text-left transition-colors hover:bg-surface-container focus:outline-none"
+              >
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <span className="material-symbols-outlined text-primary text-[17px]">receipt_long</span>
+                  <span className="font-headline font-bold text-[13px] tracking-tight truncate">
+                    {t('invoice.payments.title')}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="bg-surface-container rounded-full px-2.5 h-[22px] inline-flex items-center font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider whitespace-nowrap">
+                    {invoice.payments.length} {t('invoice.payments.count')}
+                  </span>
+                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                    {paymentsExpanded ? 'expand_less' : 'expand_more'}
+                  </span>
+                </span>
+              </button>
+              {paymentsExpanded && (
               <ul className="divide-y divide-outline-variant/10">
                 {invoice.payments.map((p, idx) => (
                   <li key={`${p.paymentId}-${idx}`} className="px-4 py-3 flex gap-3">
@@ -510,8 +483,9 @@ export default function InvoicePreview({ invoiceNumber }) {
                   </li>
                 ))}
               </ul>
-            )}
-          </SectionCard>
+              )}
+            </section>
+          )}
 
         </div>
       </main>
