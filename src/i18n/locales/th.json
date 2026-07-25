@@ -80,6 +80,62 @@
     "ordersCount": "{{count}} ออเดอร์",
     "empty": "ยังไม่มีออเดอร์"
   },
+  "invoice": {
+    "pageTitle": "ใบแจ้งหนี้",
+    "invoiceNumber": "เลขที่ใบแจ้งหนี้",
+    "selectLabel": "เลือกใบแจ้งหนี้",
+    "issuedDate": "วันที่ออก",
+    "dueDate": "ครบกำหนด",
+    "billedTo": "ออกให้แก่",
+    "customerNo": "หมายเลขลูกค้า",
+    "notFound": "ไม่พบใบแจ้งหนี้",
+    "status": {
+      "DRAFT": "ฉบับร่าง",
+      "UNPAID": "ยังไม่ชำระ",
+      "PARTIALLY_PAID": "ชำระบางส่วน",
+      "PAID": "ชำระแล้ว",
+      "CANCELLED": "ยกเลิก",
+      "VOID": "เป็นโมฆะ"
+    },
+    "sourceOrders": {
+      "title": "ออเดอร์ที่เกี่ยวข้อง",
+      "count": "ออเดอร์",
+      "empty": "ไม่มีออเดอร์ที่เชื่อมโยง"
+    },
+    "items": {
+      "title": "รายการค่าบริการ",
+      "count": "รายการ",
+      "netTotal": "ยอดสุทธิรายการ",
+      "empty": "ไม่มีรายการค่าบริการ"
+    },
+    "totals": {
+      "title": "สรุปยอด",
+      "subtotal": "ยอดรวม",
+      "adjustments": "รายการปรับปรุง",
+      "grandTotal": "ยอดสุทธิ",
+      "paid": "ยอดที่ชำระแล้ว",
+      "balanceDue": "ยอดค้างชำระ"
+    },
+    "payments": {
+      "title": "ประวัติการชำระเงิน",
+      "count": "รายการ",
+      "reference": "อ้างอิง",
+      "viewProof": "ดูสลิปการชำระเงิน",
+      "empty": "ยังไม่มีการชำระเงิน"
+    },
+    "paymentStatus": {
+      "PENDING": "รอตรวจสอบ",
+      "VERIFIED": "ยืนยันแล้ว",
+      "FAILED": "ไม่สำเร็จ"
+    },
+    "method": {
+      "CASH": "เงินสด",
+      "BANK_TRANSFER": "โอนผ่านธนาคาร",
+      "CREDIT_CARD": "บัตรเครดิต",
+      "QR_PROMPTPAY": "พร้อมเพย์ QR",
+      "OTHER": "อื่น ๆ"
+    }
+  },
   "activeOrder": {
     "pageTitle": "ออเดอร์ปัจจุบัน",
     "orderNumber": "เลขออเดอร์",

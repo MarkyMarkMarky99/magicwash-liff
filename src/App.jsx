@@ -10,6 +10,7 @@ import ActiveOrder from './pages/ActiveOrder';
 import LanguageSwitcher from './components/ui/LanguageSwitcher';
 import { getMockActiveOrder } from './mocks/activeOrder';
 import ConfirmBooking from './pages/ConfirmBooking';
+import InvoicePreview from './pages/InvoicePreview';
 
 /** Pages use this context to set / clear the header's back button. */
 export const HeaderContext = createContext(null);
@@ -179,6 +180,15 @@ function AppMain() {
           pickupAppointment={mock.pickupAppointment}
           deliveryAppointment={mock.deliveryAppointment}
         />
+      </AppShell>
+    );
+  }
+
+  // Dev preview: ?dev=invoice[&invoiceNumber=INV-2026-000102]
+  if (devParam === 'invoice') {
+    return (
+      <AppShell>
+        <InvoicePreview invoiceNumber={new URLSearchParams(window.location.search).get('invoiceNumber')} />
       </AppShell>
     );
   }

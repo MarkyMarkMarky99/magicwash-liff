@@ -88,6 +88,62 @@
     "ordersCount": "{{count}} ORDERS",
     "empty": "No orders yet"
   },
+  "invoice": {
+    "pageTitle": "Invoice",
+    "invoiceNumber": "Invoice No.",
+    "selectLabel": "Select invoice",
+    "issuedDate": "Issued",
+    "dueDate": "Due",
+    "billedTo": "Billed To",
+    "customerNo": "Customer No.",
+    "notFound": "Invoice not found",
+    "status": {
+      "DRAFT": "Draft",
+      "UNPAID": "Unpaid",
+      "PARTIALLY_PAID": "Partially paid",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled",
+      "VOID": "Void"
+    },
+    "sourceOrders": {
+      "title": "Source Orders",
+      "count": "orders",
+      "empty": "No linked orders"
+    },
+    "items": {
+      "title": "Charges",
+      "count": "items",
+      "netTotal": "Net total",
+      "empty": "No charges"
+    },
+    "totals": {
+      "title": "Summary",
+      "subtotal": "Subtotal",
+      "adjustments": "Adjustments",
+      "grandTotal": "Grand Total",
+      "paid": "Amount paid",
+      "balanceDue": "Balance Due"
+    },
+    "payments": {
+      "title": "Payment History",
+      "count": "payments",
+      "reference": "Ref",
+      "viewProof": "View payment slip",
+      "empty": "No payments yet"
+    },
+    "paymentStatus": {
+      "PENDING": "Pending",
+      "VERIFIED": "Verified",
+      "FAILED": "Failed"
+    },
+    "method": {
+      "CASH": "Cash",
+      "BANK_TRANSFER": "Bank transfer",
+      "CREDIT_CARD": "Credit card",
+      "QR_PROMPTPAY": "PromptPay QR",
+      "OTHER": "Other"
+    }
+  },
   "activeOrder": {
     "pageTitle": "Current Order",
     "orderNumber": "Order No.",
