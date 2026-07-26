@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
+import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
+import PageActionFooter from '../components/ui/PageActionFooter';
 import SectionCard, { BADGE_PILL } from '../components/ui/SectionCard';
 import qrPaymentImage from '../assets/IMG_8640.webp';
 import { mockInvoiceViewRows } from '../mocks/invoiceView';
@@ -338,43 +340,6 @@ function Lightbox({ label, onClose, children }) {
   );
 }
 
-const FOOTER_CLASS = 'bg-primary text-on-primary shadow-md';
-
-/**
- * Single-row payment footer with a fixed `h-14` whenever it is shown. Only the
- * icon/caption/label/amount and whether it is a button change. `caption` is
- * the actual invoice status (e.g.
- * "Overdue"), shown as a small line above `label` — the same caption-over-value
- * pattern used elsewhere on this page (invoice number, date chips) rather than a
- * reintroduced badge. States with no separate action (draft/cancelled/void) omit
- * `caption` and put the status straight into `label`. `onClick` omitted renders a
- * static info row.
- */
-function FooterBar({ icon, caption, label, amount, onClick }) {
-  const Tag = onClick ? 'button' : 'div';
-  const interactionClass = onClick ? 'hover:opacity-95 active:scale-[0.98]' : '';
-  return (
-    <Tag
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      className={`w-full h-14 rounded-2xl px-4 flex items-center justify-between gap-3 text-left transition-all focus:outline-none ${FOOTER_CLASS} ${interactionClass}`}
-    >
-      <span className="flex items-center gap-2.5 min-w-0">
-        <span className="material-symbols-outlined text-[20px] leading-none shrink-0" aria-hidden="true">{icon}</span>
-        <span className="min-w-0 flex flex-col items-start justify-center leading-tight">
-          {caption && (
-            <span className="font-label text-[9px] font-bold uppercase tracking-wide truncate text-on-primary/70">
-              {caption}
-            </span>
-          )}
-          <span className="font-headline font-bold text-[14px] truncate">{label}</span>
-        </span>
-      </span>
-      <span className="font-headline font-bold text-[15px] shrink-0">{amount}</span>
-    </Tag>
-  );
-}
-
 function TotalRow({ label, value, tone = 'default' }) {
   const valueClass =
     tone === 'credit' ? 'text-green-700' :
@@ -427,7 +392,6 @@ export default function InvoicePreview({ invoiceNumber }) {
 
   const { currency } = invoice;
   const statusCfg = STATUS_STYLES[invoice.status] ?? { badge: 'bg-gray-100 text-gray-600', icon: 'receipt_long' };
-  const customerName = toText(invoice.customer.customerName);
   const customerCode = toText(invoice.customer.customerCode);
   const balanceDue = invoice.balanceDue ?? 0;
   const paidAmountForDisplay = invoice.paidAmount > 0 ? -invoice.paidAmount : invoice.paidAmount;
@@ -517,42 +481,12 @@ export default function InvoicePreview({ invoiceNumber }) {
             </div>
           </section>
 
-          {/* Billed to */}
-          <section className="relative border border-outline-variant/40 rounded-2xl px-4 pt-6 pb-4">
-            <p className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface px-3 font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide whitespace-nowrap">
-              {t('invoice.billedTo')}
-            </p>
-            <div className="min-w-0">
-              <h3 className="font-headline font-bold text-[15px] text-primary leading-snug">
-                {customerName ?? '–'}
-              </h3>
-              {customerCode && (
-                <p className="font-label text-[10px] text-on-surface-variant font-bold tracking-wide mt-0.5">
-                  {t('invoice.customerNo')} · {customerCode}
-                </p>
-              )}
-              {toText(invoice.customer.phone) && (
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none">call</span>
-                  <p className="font-body text-[11px] text-on-surface-variant">{invoice.customer.phone}</p>
-                </div>
-              )}
-              {toText(invoice.customer.email) && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none">mail</span>
-                  <p className="font-body text-[11px] text-on-surface-variant truncate">{invoice.customer.email}</p>
-                </div>
-              )}
-              {toText(invoice.customer.address) && (
-                <div className="flex items-start gap-1 mt-0.5">
-                  <span className="material-symbols-outlined text-on-surface-variant text-[14px] leading-none mt-px">location_on</span>
-                  <p className="font-body text-[11px] text-on-surface-variant leading-relaxed">
-                    {invoice.customer.address}
-                  </p>
-                </div>
-              )}
-            </div>
-          </section>
+          <CustomerDetailsCard
+            label={t('invoice.billedTo')}
+            customer={invoice.customer}
+            customerCode={customerCode}
+            customerCodeLabel={t('invoice.customerNo')}
+          />
 
           {/* Charges */}
           <SectionCard
@@ -653,11 +587,7 @@ export default function InvoicePreview({ invoiceNumber }) {
       </main>
 
       {/* Fixed-height payment footer. Draft invoices intentionally omit it. */}
-      {footer && (
-        <footer className="flex-none px-4 pt-3 pb-4 bg-surface border-t border-outline-variant/20 z-40">
-          <FooterBar {...footer} />
-        </footer>
-      )}
+      {footer && <PageActionFooter {...footer} />}
 
       {proofUrl && (
         <Lightbox label={t('invoice.payments.viewProof')} onClose={closeProof}>

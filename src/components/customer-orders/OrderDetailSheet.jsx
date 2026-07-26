@@ -5,7 +5,7 @@ import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
 import DateChip from '../ui/DateChip';
 import SectionCard from '../ui/SectionCard';
 
-export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPhotos, onScheduleDelivery }) {
+export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onScheduleDelivery }) {
   const { t, i18n } = useTranslation();
   const dateLocale = getDateLocale(i18n.language);
   const [order, setOrder] = useState(null);
@@ -76,8 +76,6 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
     }
   };
 
-  const sheetTop = topOffset != null ? `calc(${topOffset}px - 30%)` : '8%';
-
   return (
     <>
       {/* Backdrop */}
@@ -91,7 +89,7 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
         ref={sheetRef}
         className={`absolute inset-x-0 bottom-0 z-40 bg-surface rounded-t-2xl shadow-2xl flex flex-col ease-out ${dragging ? '' : 'transition-transform duration-300'}`}
         style={{
-          top: sheetTop,
+          top: '8%',
           transform: visible ? `translateY(${dragOffset}px)` : 'translateY(100%)',
         }}
       >

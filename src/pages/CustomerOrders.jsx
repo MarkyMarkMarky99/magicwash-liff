@@ -1,13 +1,14 @@
-import { useState, useEffect, useContext, useRef, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCustomerById } from '../api/customerApi';
 import { getOrdersByCustomerId } from '../api/orderApi';
 import { getWaitingPickups, clearAppointmentsCache } from '../api/appointmentApi';
 import { lsClear, cacheKey } from '../api/localCache';
 import { HeaderContext } from '../App';
-import CustomerCard from '../components/customer-orders/CustomerCard';
 import OrderList from '../components/customer-orders/OrderList';
 import OrderDetailSheet from '../components/customer-orders/OrderDetailSheet';
+import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
+import PageActionFooter from '../components/ui/PageActionFooter';
 import OrderGallery from './OrderGallery';
 import BookPickup from './BookPickup';
 
@@ -21,10 +22,11 @@ export default function CustomerOrders({ custId }) {
   const [booking, setBooking]                 = useState(null); // { type: 'pickup'|'delivery', orderId: string|null }
   const [bookingBusy, setBookingBusy]         = useState(false); // true while a booking POST is in flight
   const [waitingPickups, setWaitingPickups]   = useState([]);    // upcoming active pickups (from Appointments)
-  const [sheetTop, setSheetTop]               = useState(null);
   const { t } = useTranslation();
-  const setOnBack      = useContext(HeaderContext);
-  const cardSectionRef = useRef(null);
+  const setOnBack = useContext(HeaderContext);
+  const customerNumber = customer?.customerIndex && customer?.phone
+    ? `${customer.customerIndex}-${String(customer.phone).slice(-4)}`
+    : customer?.customerId || '–';
 
   const loadWaitingPickups = useCallback((id = custId) => {
     if (!id) return;
@@ -83,11 +85,6 @@ export default function CustomerOrders({ custId }) {
   }, [custId, refreshing, loadWaitingPickups]);
 
   const handleSelectOrder = (orderId) => {
-    if (cardSectionRef.current) {
-      setSheetTop(cardSectionRef.current.offsetTop + cardSectionRef.current.offsetHeight);
-    } else {
-      setSheetTop(null);
-    }
     setSelectedOrderId(orderId);
   };
 
@@ -129,74 +126,62 @@ export default function CustomerOrders({ custId }) {
 
       {/* Orders list view */}
       {!galleryOrderId && !booking && (
-        <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
+        <>
+          <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 
-          {status === 'loading' && (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3">
-              <span className="material-symbols-outlined text-primary text-5xl animate-pulse">local_laundry_service</span>
-              <p className="font-body text-on-surface-variant text-sm">กำลังโหลดข้อมูล…</p>
-            </div>
-          )}
+            {status === 'loading' && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                <span className="material-symbols-outlined text-primary text-5xl animate-pulse">local_laundry_service</span>
+                <p className="font-body text-on-surface-variant text-sm">กำลังโหลดข้อมูล…</p>
+              </div>
+            )}
 
-          {status === 'error' && (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3">
-              <span className="material-symbols-outlined text-error text-5xl">error_outline</span>
-              <p className="font-body text-on-surface-variant text-sm text-center">
-                {custId ? 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' : 'ไม่พบ Customer ID ใน URL'}
-              </p>
-            </div>
-          )}
+            {status === 'error' && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                <span className="material-symbols-outlined text-error text-5xl">error_outline</span>
+                <p className="font-body text-on-surface-variant text-sm text-center">
+                  {custId ? 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' : 'ไม่พบ Customer ID ใน URL'}
+                </p>
+              </div>
+            )}
 
-          {status === 'done' && (
-            <>
-              <div ref={cardSectionRef} className="px-4 pt-4 pb-3 space-y-4">
-                {/* Header — mirrors OrderInfoCard layout */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-widest mb-0.5">
-                      {t('customerOrders.customerNo')}
-                    </p>
-                    <h2 className="font-headline font-bold text-[22px] text-on-surface leading-tight truncate">
-                      {customer?.customerIndex && customer?.phone ? `${customer.customerIndex}-${String(customer.phone).slice(-4)}` : customer?.customerId || '–'}
-                    </h2>
-                  </div>
-                  {customer?.customerType && (
-                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                      <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-widest whitespace-nowrap">
-                        {t('customerOrders.type')}
-                      </p>
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 font-headline text-[11px] font-bold text-primary">
-                        {customer.customerType}
-                      </span>
-                    </div>
-                  )}
+            {status === 'done' && (
+              <>
+                <div className="px-4 pt-4 pb-3 space-y-4">
+                  <CustomerDetailsCard
+                    label={t('activeOrder.customer.details')}
+                    customer={customer}
+                    customerCodeLabel={t('customerOrders.customerNo')}
+                    customerCode={customerNumber}
+                  />
                 </div>
-                <CustomerCard
-                  customer={customer}
-                  onSchedule={handleShowBookPickup}
-                />
-              </div>
-              <div className="flex-1 px-4 pb-6">
-                <OrderList
-                  orders={orders}
-                  waitingPickups={waitingPickups}
-                  onViewPhotos={setGalleryOrderId}
-                  onSelectOrder={handleSelectOrder}
-                  onRefresh={handleRefresh}
-                  refreshing={refreshing}
-                />
-              </div>
-            </>
+                <div className="flex-1 px-4 pb-6">
+                  <OrderList
+                    orders={orders}
+                    waitingPickups={waitingPickups}
+                    onViewPhotos={setGalleryOrderId}
+                    onSelectOrder={handleSelectOrder}
+                    onRefresh={handleRefresh}
+                    refreshing={refreshing}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          {status === 'done' && !selectedOrderId && (
+            <PageActionFooter
+              icon="event"
+              label={t('customerOrders.schedulePickup')}
+              onClick={handleShowBookPickup}
+            />
           )}
-
-        </div>
+        </>
       )}
 
       {/* Order detail bottom sheet */}
       {selectedOrderId && !galleryOrderId && (
         <OrderDetailSheet
           orderId={selectedOrderId}
-          topOffset={sheetTop}
           onClose={() => setSelectedOrderId(null)}
           onViewPhotos={handleViewPhotosFromSheet}
           onScheduleDelivery={handleShowDelivery}
