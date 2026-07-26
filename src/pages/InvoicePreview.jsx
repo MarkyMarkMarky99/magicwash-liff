@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
+import SectionCard, { BADGE_PILL } from '../components/ui/SectionCard';
 import qrPaymentImage from '../assets/IMG_8640.webp';
 import { mockInvoiceViewRows } from '../mocks/invoiceView';
 
@@ -153,29 +154,6 @@ function readInvoice(row) {
     paidAmount: toNumber(row.paidAmount),
     balanceDue: toNumber(row.balanceDue),
   };
-}
-
-/** Pill used for the header count badge — shared so the menu trigger matches it exactly. */
-const BADGE_PILL = 'flex items-center bg-surface-container rounded-full px-2.5 h-[22px] font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider shrink-0 whitespace-nowrap';
-
-/**
- * Card with a static titled header. `action` replaces the plain badge when the
- * count itself needs to be interactive; the header stays non-interactive.
- * No `overflow-hidden` — an anchored menu must be able to escape the card.
- */
-function SectionCard({ icon, title, badge, action, children }) {
-  return (
-    <section className="bg-white w-full rounded-2xl">
-      <div className="px-4 py-2 bg-surface-container-low text-primary flex items-center justify-between gap-2 rounded-t-2xl">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="material-symbols-outlined text-primary text-[16px]" aria-hidden="true">{icon}</span>
-          <h2 className="font-headline font-bold text-[13px] tracking-tight truncate">{title}</h2>
-        </div>
-        {action ?? (badge && <span className={BADGE_PILL}>{badge}</span>)}
-      </div>
-      {children}
-    </section>
-  );
 }
 
 /**

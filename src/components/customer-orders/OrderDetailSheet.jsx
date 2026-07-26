@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { getOrderById } from '../../api/orderApi';
 import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
 import DateChip from '../ui/DateChip';
+import SectionCard from '../ui/SectionCard';
 
 export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPhotos, onScheduleDelivery }) {
   const { t, i18n } = useTranslation();
@@ -10,7 +11,6 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
   const [order, setOrder] = useState(null);
   const [status, setStatus] = useState('loading');
   const [visible, setVisible] = useState(false);
-  const [itemsCollapsed, setItemsCollapsed] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
   const dragStartYRef = useRef(0);
@@ -197,46 +197,29 @@ export default function OrderDetailSheet({ orderId, topOffset, onClose, onViewPh
 
               {/* Items list */}
               {order.items?.length > 0 && (
-                <section className="bg-white w-full rounded-2xl overflow-hidden">
-                  <div
-                    className="px-4 py-2 bg-surface-container-low text-primary flex items-center justify-between cursor-pointer select-none"
-                    onClick={() => setItemsCollapsed(!itemsCollapsed)}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="material-symbols-outlined text-primary text-[16px]">checkroom</span>
-                      <h2 className="font-headline font-bold text-[13px] tracking-tight">{t('activeOrder.items.title')}</h2>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 h-[22px]">
-                        <span className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
-                          {order.quantity || 0} {t('activeOrder.pieces')}
+                <SectionCard
+                  icon="checkroom"
+                  title={t('activeOrder.items.title')}
+                  badge={`${order.quantity || 0} ${t('activeOrder.pieces')}`}
+                >
+                  <ul className="divide-y divide-outline-variant/10">
+                    {order.items.map((item) => (
+                      <li key={item.id} className="px-4 py-3 flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-body text-sm text-on-surface font-medium leading-tight truncate">
+                            {item.description || '—'}
+                          </p>
+                          {item.service_type && (
+                            <p className="font-body text-[11px] text-on-surface-variant mt-0.5">{item.service_type}</p>
+                          )}
+                        </div>
+                        <span className="font-label text-[11px] font-semibold text-on-surface-variant shrink-0">
+                          {item.quantity} {t('activeOrder.pieces')}
                         </span>
-                      </div>
-                      <span className={`material-symbols-outlined text-primary text-[16px] transition-transform ${itemsCollapsed ? '' : 'rotate-180'}`}>
-                        expand_more
-                      </span>
-                    </div>
-                  </div>
-                  {!itemsCollapsed && (
-                    <ul className="divide-y divide-outline-variant/10">
-                      {order.items.map((item) => (
-                        <li key={item.id} className="px-4 py-3 flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-body text-sm text-on-surface font-medium leading-tight truncate">
-                              {item.description || '—'}
-                            </p>
-                            {item.service_type && (
-                              <p className="font-body text-[11px] text-on-surface-variant mt-0.5">{item.service_type}</p>
-                            )}
-                          </div>
-                          <span className="font-label text-[11px] font-semibold text-on-surface-variant shrink-0">
-                            {item.quantity} {t('activeOrder.pieces')}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+                      </li>
+                    ))}
+                  </ul>
+                </SectionCard>
               )}
 
               {/* Note */}

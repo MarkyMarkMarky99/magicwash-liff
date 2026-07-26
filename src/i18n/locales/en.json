@@ -86,6 +86,7 @@
     "items": "Items",
     "orderHistory": "Order History",
     "ordersCount": "{{count}} ORDERS",
+    "refresh": "Refresh orders",
     "empty": "No orders yet"
   },
   "invoice": {

@@ -176,7 +176,7 @@ export default function CustomerOrders({ custId }) {
                   onSchedule={handleShowBookPickup}
                 />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 px-4 pb-6">
                 <OrderList
                   orders={orders}
                   waitingPickups={waitingPickups}

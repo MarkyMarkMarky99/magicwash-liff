@@ -78,6 +78,7 @@
     "items": "รายการ",
     "orderHistory": "ประวัติออเดอร์",
     "ordersCount": "{{count}} ออเดอร์",
+    "refresh": "รีเฟรชออเดอร์",
     "empty": "ยังไม่มีออเดอร์"
   },
   "invoice": {
