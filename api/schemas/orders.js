@@ -9,6 +9,14 @@ export const columns = [
   'deletedBy',
 ];
 
+export const headers = [
+  'order_id', 'order_number', 'order_name', 'order_description', 'invoice_id',
+  'status', 'service_tier', 'channel', 'received_date', 'due_date',
+  'customer', 'financial_summary', 'payment', 'notes', 'tags',
+  'created_at', 'created_by', 'updated_at', 'updated_by', 'deleted_at',
+  'deleted_by',
+];
+
 export const dateColumns = new Set(['receivedDate', 'dueDate', 'createdAt', 'updatedAt', 'deletedAt']);
 
 export const schema = {

@@ -68,7 +68,7 @@ export default function CustomerOrders({ custId }) {
   const handleRefresh = useCallback(async () => {
     if (!custId || refreshing) return;
     lsClear(cacheKey('customer', custId));
-    lsClear(cacheKey('ordersView', custId));
+    lsClear(cacheKey('ordersViewV2', custId));
     clearAppointmentsCache(custId);
     setRefreshing(true);
     try {

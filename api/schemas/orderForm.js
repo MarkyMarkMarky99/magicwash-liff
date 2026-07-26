@@ -9,6 +9,14 @@ export const columns = [
   'orderDescription',
 ];
 
+export const headers = [
+  'id', 'order_number', 'customer_id', 'received_date', 'due_date',
+  'service_type', 'status', 'quantity', 'hangers', 'bags',
+  'hangers_image', 'bags_image', 'form_image', 'note', 'timestamp',
+  'created_by', 'updated_at', 'updated_by', 'invoice_id', 'order_name',
+  'order_description',
+];
+
 export const dateColumns = new Set(['receivedDate', 'dueDate', 'timestamp', 'updatedAt']);
 
 export const schema = {

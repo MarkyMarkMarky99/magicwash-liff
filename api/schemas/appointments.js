@@ -11,6 +11,13 @@ export const columns = [
   'deletedAt', 'deletedBy',
 ];
 
+export const headers = [
+  'AppointmentID', 'CustomerID', 'AppointmentType', 'AppointmentDate', 'TimeSlot',
+  'Status', 'Address', 'PickupOrderID', 'DeliveryOrderID', 'Notes',
+  'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy', 'ServiceTier',
+  'DeletedAt', 'DeletedBy',
+];
+
 // Only appointmentDate is a true date cell (Date(y,m,d)); createdAt/updatedAt are
 // datetime/string and are intentionally left raw.
 export const dateColumns = new Set(['appointmentDate']);

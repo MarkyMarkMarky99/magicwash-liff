@@ -12,7 +12,7 @@ LINE LIFF app for a laundry service — customers book pickups, track orders, an
 
 ## Project Structure
 - `api/` — Vercel serverless functions (hides spreadsheet IDs and AppScript URLs); `_gviz.js` is a shared internal module
-- `api/schemas/` — one `.js` file per Google Sheet table; each exports `columns` (ordered camelCase array), `dateColumns` (Set), and `schema` (Draft 2020-12 JSON Schema)
+- `api/schemas/` — one `.js` file per Google Sheet table; each exports `columns` (camelCase field names), `headers` (the sheet's real header-row text for each field, same order/length as `columns` — used to resolve cells by name, never by position), `dateColumns` (Set), and `schema` (Draft 2020-12 JSON Schema)
 - `src/api/` — client fetch logic, `localStorage` TTL caching, image cache
 - `src/components/ui/` — generic reusable UI (e.g., `SuccessModal.jsx`)
 - `src/components/active-order/` — components for the `ActiveOrder` page
@@ -50,11 +50,12 @@ No test suite — there are no test files in this project.
 ## GViz / Schema Layer
 
 ### Reading data (`api/gviz.js`)
-- Endpoint: `GET /api/gviz?source=<key>&tq=<GViz SQL>`
+- Endpoint: `GET /api/gviz?source=<key>&filterField=<camelCase>&filterValue=<value>&sortField=<camelCase>&sortDir=<asc|desc>&limit=<n>&cols=<comma-list>`
 - `source` is a validated key from `SOURCE_MAP` in `api/_gviz.js` — never pass raw sheet names or spreadsheet IDs from the frontend.
-- Responses are **named-key objects** (`{ orderId, customerId, ... }`), never positional `c0/c1/...`.
+- **Never filter/sort by GViz column letter** (`WHERE B='...'`, `ORDER BY D`). Column letters shift whenever someone inserts a column in the sheet, which silently breaks any query hard-coding one — this is exactly what corrupted `OrdersView` reads in production once. Use `filterField`/`sortField` with the schema's camelCase field name instead; the server resolves the field to its current column by matching the live sheet header, on every request.
+- `tq` (raw GViz SQL) is still accepted and defaults to `SELECT *` when omitted, for advanced cases — but it must never contain a letter-addressed `WHERE`/`ORDER BY`. A `tq` filter runs inside Google's own query engine before row-mapping ever sees the data, so it cannot be made header-safe the way `filterField`/`sortField` are.
+- Responses are **named-key objects** (`{ orderId, customerId, ... }`), never positional `c0/c1/...`. `mapRow()` in `api/_gviz.js` resolves each field by matching the schema's `headers[i]` against the sheet's actual live header row (`table.cols[i].label`) — never by trusting that `columns[i]` lines up with a column's position.
 - Date/date-time columns are automatically converted from GViz `Date(yyyy,m,d)` format to ISO strings server-side. Clients do **not** need to call `gvizDateToISO` on GViz responses.
-- Always use `SELECT *` in `tq` queries so the column-index mapping is correct. Use `WHERE` for filtering.
 
 ### Known source keys
 | source key | Sheet | Spreadsheet env var |
@@ -69,8 +70,8 @@ No test suite — there are no test files in this project.
 | `orderItems` | OrderItems | `GVIZ_ORDERS_SPREADSHEET_ID` |
 
 ### Adding a new sheet
-1. Add a file `api/schemas/<camelCaseName>.js` — export `columns`, `dateColumns`, `schema`.
-2. Add an entry to `SOURCE_MAP` in `api/_gviz.js`.
+1. Add a file `api/schemas/<camelCaseName>.js` — export `columns` (camelCase field names), `headers` (the sheet's actual header-row text per field, same order/length as `columns` — copy it verbatim from the sheet, don't guess or case-convert it), `dateColumns`, `schema`.
+2. Add an entry to `SOURCE_MAP` in `api/_gviz.js`, including `headers` and `schema.required`.
 3. Add the spreadsheet ID env var to the Vercel dashboard if it's a new spreadsheet.
 
 ### Writing data (`api/write.js`)

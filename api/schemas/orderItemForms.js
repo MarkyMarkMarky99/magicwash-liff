@@ -7,6 +7,12 @@ export const columns = [
   'specialInstructions', 'createdBy', 'updatedAt', 'updatedBy', 'invoiceItemId',
 ];
 
+export const headers = [
+  'id', 'order_id', 'item_id', 'description', 'quantity',
+  'price', 'credits_used', 'timestamp', 'category', 'service_type',
+  'special_instructions', 'created_by', 'updated_at', 'updated_by', 'invoice_item_id',
+];
+
 export const dateColumns = new Set(['timestamp', 'updatedAt']);
 
 export const schema = {

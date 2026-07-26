@@ -8,6 +8,13 @@ export const columns = [
   'lastVisitDate', 'preferredContactMethod', 'updatedAt', 'updatedBy', 'deletedAt',
 ];
 
+export const headers = [
+  'Timestamp', 'CustomerID', 'CustomerIndex', 'CustomerName', 'Phone',
+  'Address', 'Location', 'RegisteredDate', 'Facebook', 'Line',
+  'Whatsapp', 'Email', 'CustomerType', 'Source', 'ScheduledDays',
+  'LastVisitDate', 'PreferredContactMethod', 'UpdatedAt', 'UpdatedBy', 'DeletedAt',
+];
+
 export const dateColumns = new Set(['registeredDate', 'lastVisitDate']);
 
 export const schema = {

@@ -7,6 +7,12 @@ export const columns = [
   'updatedAt', 'checked', 'isActive', 'fileId',
 ];
 
+export const headers = [
+  'id', 'order_id', 'orderitem_id', 'item_id', 'image_path',
+  'image_url', 'notes', 'timestamp', 'created_by', 'updated_by',
+  'updated_at', 'checked', 'is_active', 'file_id',
+];
+
 export const dateColumns = new Set(['timestamp', 'updatedAt']);
 
 export const schema = {

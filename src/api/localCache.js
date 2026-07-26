@@ -48,8 +48,18 @@ export function lsClear(key) {
 
 // --- GViz query helpers ---
 
-/** Escape a value for use inside a GViz string literal (single-quote delimited). */
-export const gvizStr = (s) => String(s).replace(/'/g, "''");
+/** Build a /api/gviz URL from field-name filter/sort params (no column letters). */
+export function gvizUrl({ source, tq, filterField, filterValue, sortField, sortDir, limit, cols }) {
+  const params = new URLSearchParams({ source });
+  if (tq) params.set('tq', tq);
+  if (filterField != null) params.set('filterField', filterField);
+  if (filterValue != null) params.set('filterValue', filterValue);
+  if (sortField) params.set('sortField', sortField);
+  if (sortDir) params.set('sortDir', sortDir);
+  if (limit != null) params.set('limit', String(limit));
+  if (cols) params.set('cols', cols);
+  return `/api/gviz?${params.toString()}`;
+}
 
 // --- HTTP helpers ---
 
@@ -83,10 +93,9 @@ export async function fetchAndCache(url, key, transform = (r) => r) {
   return result;
 }
 
-export function gvizSwrFetch(source, tq, id, transform = (r) => r, onRevalidate, cols) {
-  let url = `/api/gviz?source=${encodeURIComponent(source)}&tq=${encodeURIComponent(tq)}`;
-  if (cols) url += `&cols=${encodeURIComponent(cols)}`;
-  return swrFetch(url, cacheKey(source, id), transform, onRevalidate);
+export function gvizSwrFetch(source, filterSpec, id, transform = (r) => r, onRevalidate, cols, cacheResource = source) {
+  const url = gvizUrl({ source, cols, ...filterSpec });
+  return swrFetch(url, cacheKey(cacheResource, id), transform, onRevalidate);
 }
 
 export async function swrFetch(url, key, transform = (r) => r, onRevalidate) {

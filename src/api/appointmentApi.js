@@ -1,4 +1,4 @@
-import { cacheKey, gvizSwrFetch, lsSet, gvizStr, lsClear } from './localCache';
+import { cacheKey, gvizSwrFetch, gvizUrl, lsSet, lsClear } from './localCache';
 
 // Columns fetched for both the booking guard and the "waiting for pickup" list.
 // Same set for both callers so the shared cache entry stays consistent.
@@ -54,8 +54,8 @@ function byDateAsc(a, b) {
 
 // --- reads ---
 
-function apptTq(customerId) {
-  return `SELECT * WHERE B='${gvizStr(customerId)}'`;
+function apptFilterSpec(customerId) {
+  return { filterField: 'customerId', filterValue: customerId };
 }
 
 /**
@@ -64,7 +64,7 @@ function apptTq(customerId) {
  * Seeds the shared cache on success; throws on failure so callers can fail closed.
  */
 export async function getAppointmentsFresh(customerId) {
-  const url = `/api/gviz?source=appointments&tq=${encodeURIComponent(apptTq(customerId))}&cols=${encodeURIComponent(APPT_COLS)}`;
+  const url = gvizUrl({ source: 'appointments', ...apptFilterSpec(customerId), cols: APPT_COLS });
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const rows = await res.json();
@@ -82,7 +82,7 @@ export async function getAppointmentsFresh(customerId) {
 export async function getWaitingPickups(customerId, onRevalidate) {
   const rows = await gvizSwrFetch(
     'appointments',
-    apptTq(customerId),
+    apptFilterSpec(customerId),
     customerId,
     undefined,
     onRevalidate ? (rows) => onRevalidate(filterWaitingPickups(rows)) : null,

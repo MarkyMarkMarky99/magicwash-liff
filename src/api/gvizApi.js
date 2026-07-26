@@ -1,4 +1,4 @@
-import { gvizSwrFetch, gvizStr } from './localCache';
+import { gvizSwrFetch } from './localCache';
 
 function toDirectUrl(url) {
   if (!url) return null;
@@ -19,7 +19,7 @@ function transformPhoto(row) {
 export async function getPhotosByOrderId(orderId, onRevalidate) {
   const rows = await gvizSwrFetch(
     'photos',
-    `SELECT * WHERE B='${gvizStr(orderId)}'`,
+    { filterField: 'orderId', filterValue: orderId },
     orderId,
     transformPhoto,
     onRevalidate ? (rows) => onRevalidate(rows.filter((r) => r.imageUrl)) : null,
