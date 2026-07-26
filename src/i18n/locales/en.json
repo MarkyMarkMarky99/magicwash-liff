@@ -97,6 +97,14 @@
     "billedTo": "Billed To",
     "customerNo": "Customer No.",
     "notFound": "Invoice not found",
+    "close": "Close",
+    "pay": {
+      "action": "Pay now",
+      "title": "Scan to pay",
+      "paidLabel": "Paid in full",
+      "pendingLabel": "Payment pending",
+      "pendingNotice": "We're verifying your payment — no need to pay again."
+    },
     "status": {
       "DRAFT": "Draft",
       "UNPAID": "Unpaid",

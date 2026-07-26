@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
+import qrPaymentImage from '../assets/IMG_8640.webp';
 import { mockInvoiceViewRows } from '../mocks/invoiceView';
 
 const STATUS_STYLES = {
@@ -306,8 +307,13 @@ function PaymentsMenu({ payments, currency, dateLocale, suspended, onSelectProof
   );
 }
 
-/** Full-screen proof image. Dismisses on backdrop, close button, and Escape. */
-function ProofLightbox({ url, label, onClose }) {
+/**
+ * Full-screen overlay shell — backdrop, close button, Escape, focus handling.
+ * Shared by the payment-slip viewer and the QR payment popup so both dismiss
+ * identically. Clicks on the content are swallowed; clicks around it close.
+ */
+function Lightbox({ label, onClose, children }) {
+  const { t } = useTranslation();
   const closeRef = useRef(null);
 
   useEffect(() => {
@@ -338,20 +344,56 @@ function ProofLightbox({ url, label, onClose }) {
         ref={closeRef}
         type="button"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t('invoice.close')}
         className="absolute top-4 right-4 text-white/80 hover:text-white active:scale-95 transition-all focus:outline-none"
       >
         <span className="material-symbols-outlined text-[28px]" aria-hidden="true">close</span>
       </button>
-      <img
-        src={url}
-        alt={label}
-        referrerPolicy="no-referrer"
+      <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[80vh] max-w-full w-auto object-contain rounded-xl shadow-2xl"
-      />
+        className="max-w-full max-h-full flex items-center justify-center"
+      >
+        {children}
+      </div>
     </div>,
     document.body,
+  );
+}
+
+const FOOTER_CLASS = 'bg-primary text-on-primary shadow-md';
+
+/**
+ * Single-row payment footer with a fixed `h-14` whenever it is shown. Only the
+ * icon/caption/label/amount and whether it is a button change. `caption` is
+ * the actual invoice status (e.g.
+ * "Overdue"), shown as a small line above `label` — the same caption-over-value
+ * pattern used elsewhere on this page (invoice number, date chips) rather than a
+ * reintroduced badge. States with no separate action (draft/cancelled/void) omit
+ * `caption` and put the status straight into `label`. `onClick` omitted renders a
+ * static info row.
+ */
+function FooterBar({ icon, caption, label, amount, onClick }) {
+  const Tag = onClick ? 'button' : 'div';
+  const interactionClass = onClick ? 'hover:opacity-95 active:scale-[0.98]' : '';
+  return (
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={`w-full h-14 rounded-2xl px-4 flex items-center justify-between gap-3 text-left transition-all focus:outline-none ${FOOTER_CLASS} ${interactionClass}`}
+    >
+      <span className="flex items-center gap-2.5 min-w-0">
+        <span className="material-symbols-outlined text-[20px] leading-none shrink-0" aria-hidden="true">{icon}</span>
+        <span className="min-w-0 flex flex-col items-start justify-center leading-tight">
+          {caption && (
+            <span className="font-label text-[9px] font-bold uppercase tracking-wide truncate text-on-primary/70">
+              {caption}
+            </span>
+          )}
+          <span className="font-headline font-bold text-[14px] truncate">{label}</span>
+        </span>
+      </span>
+      <span className="font-headline font-bold text-[15px] shrink-0">{amount}</span>
+    </Tag>
   );
 }
 
@@ -373,18 +415,21 @@ export default function InvoicePreview({ invoiceNumber }) {
   const { t, i18n } = useTranslation();
   const setOnBack = useContext(HeaderContext);
   const [selected, setSelected] = useState(() => resolveInvoiceNumber(invoiceNumber, rows));
-  const [proofUrl, setProofUrl] = useState(null); // open lightbox, or null
+  const [proofUrl, setProofUrl] = useState(null); // open slip lightbox, or null
+  const [payOpen, setPayOpen] = useState(false);  // QR payment popup
 
   useEffect(() => {
     setOnBack?.(null);
   }, [setOnBack]);
 
   const closeProof = useCallback(() => setProofUrl(null), []);
+  const closePay = useCallback(() => setPayOpen(false), []);
 
   // Keep the URL shareable when the customer switches invoices.
   const handleSelect = (num) => {
     setSelected(num);
     setProofUrl(null);
+    setPayOpen(false);
     const params = new URLSearchParams(window.location.search);
     params.set('invoiceNumber', num);
     window.history.replaceState(null, '', `${window.location.pathname}?${params}`);
@@ -409,6 +454,41 @@ export default function InvoicePreview({ invoiceNumber }) {
   const balanceDue = invoice.balanceDue ?? 0;
   const paidAmountForDisplay = invoice.paidAmount > 0 ? -invoice.paidAmount : invoice.paidAmount;
   const hasPayments = invoice.payments.length > 0;
+
+  // `balanceDue` only nets off *verified* money, so a payment the customer has
+  // already submitted but the shop has not confirmed is invisible to it. Netting
+  // pending money off here keeps us from asking twice for the same amount.
+  const pendingAmount = invoice.payments
+    .filter((p) => p.status === 'PENDING')
+    .reduce((sum, p) => sum + (p.amount ?? 0), 0);
+  const remainingDue = Math.max(0, balanceDue - pendingAmount);
+  // DRAFT isn't finalized yet and CANCELLED/VOID has nothing left to collect —
+  // neither is payable, regardless of what balanceDue happens to say.
+  const collectable = !['DRAFT', 'CANCELLED', 'VOID'].includes(invoice.status);
+  // Ask only for what is not already in flight; when pending covers the balance,
+  // the footer opens the same QR (still reachable) with a pending notice instead
+  // of a fresh "Pay now" ask for money that's already on its way.
+  const canPay = collectable && remainingDue > 0;
+  const awaitingVerification = collectable && !canPay && balanceDue > 0 && pendingAmount > 0;
+
+  // Footer content is derived once so every visible state shares one fixed-height
+  // bar. Draft intentionally has no footer. Other invoice statuses are surfaced
+  // as the `caption` above an action or as the `label` itself.
+  const statusLabel = t(`invoice.status.${invoice.status}`, { defaultValue: invoice.status });
+  let footer;
+  if (invoice.status === 'DRAFT') {
+    footer = null;
+  } else if (!collectable) {
+    // Cancelled / void: nothing to do, so the status word is the whole message.
+    footer = { icon: statusCfg.icon, label: statusLabel, amount: formatMoney(balanceDue, currency) };
+  } else if (canPay) {
+    footer = { icon: 'qr_code_2', caption: statusLabel, label: t('invoice.pay.action'), amount: formatMoney(remainingDue, currency), onClick: () => setPayOpen(true) };
+  } else if (awaitingVerification) {
+    footer = { icon: 'hourglass_top', caption: statusLabel, label: t('invoice.pay.pendingLabel'), amount: formatMoney(pendingAmount, currency), onClick: () => setPayOpen(true) };
+  } else {
+    // Fully settled: also just the status word — the paid total speaks for itself.
+    footer = { icon: statusCfg.icon, label: statusLabel, amount: formatMoney(invoice.paidAmount, currency) };
+  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden font-body text-on-surface">
@@ -442,7 +522,8 @@ export default function InvoicePreview({ invoiceNumber }) {
             </div>
           </div>
 
-          {/* Invoice number + status on the left, dates on the right */}
+          {/* Invoice number on the left, dates on the right.
+              Status now lives only in the payment footer — see below. */}
           <section className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide mb-0.5">
@@ -451,10 +532,6 @@ export default function InvoicePreview({ invoiceNumber }) {
               <h2 className="font-headline font-bold text-[22px] text-on-surface leading-tight truncate">
                 {invoice.invoiceNumber}
               </h2>
-              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-label text-[10px] font-bold mt-2 ${statusCfg.badge}`}>
-                <span className="material-symbols-outlined text-[14px] leading-none">{statusCfg.icon}</span>
-                {t(`invoice.status.${invoice.status}`, { defaultValue: invoice.status })}
-              </span>
             </div>
             <div className="shrink-0 min-w-[112px] flex flex-col items-end gap-2 pt-0.5">
               <DateChip label={t('invoice.issuedDate')} value={formatDisplayDate(invoice.issuedDate, undefined, dateLocale)} />
@@ -566,7 +643,7 @@ export default function InvoicePreview({ invoiceNumber }) {
                 payments={invoice.payments}
                 currency={currency}
                 dateLocale={dateLocale}
-                suspended={proofUrl != null}
+                suspended={proofUrl != null || payOpen}
                 onSelectProof={setProofUrl}
               />
             ) : null}
@@ -597,8 +674,50 @@ export default function InvoicePreview({ invoiceNumber }) {
         </div>
       </main>
 
+      {/* Fixed-height payment footer. Draft invoices intentionally omit it. */}
+      {footer && (
+        <footer className="flex-none px-4 pt-3 pb-4 bg-surface border-t border-outline-variant/20 z-40">
+          <FooterBar {...footer} />
+        </footer>
+      )}
+
       {proofUrl && (
-        <ProofLightbox url={proofUrl} label={t('invoice.payments.viewProof')} onClose={closeProof} />
+        <Lightbox label={t('invoice.payments.viewProof')} onClose={closeProof}>
+          <img
+            src={proofUrl}
+            alt={t('invoice.payments.viewProof')}
+            referrerPolicy="no-referrer"
+            className="max-h-[80vh] max-w-full w-auto object-contain rounded-xl shadow-2xl"
+          />
+        </Lightbox>
+      )}
+
+      {payOpen && (
+        <Lightbox label={t('invoice.pay.title')} onClose={closePay}>
+          {/* Content order is deliberate: QR first, then what/why it's for, then
+              any guidance — so the QR is never buried under text on a small screen. */}
+          <div className="w-[280px] max-w-full max-h-[80vh] overflow-y-auto no-scrollbar bg-surface-container-lowest rounded-2xl shadow-2xl p-5 flex flex-col items-center text-center">
+            <img
+              src={qrPaymentImage}
+              alt={t('invoice.pay.title')}
+              className="w-full rounded-xl"
+            />
+            <p className="font-headline font-bold text-[22px] text-on-surface leading-tight mt-4">
+              {formatMoney(awaitingVerification ? pendingAmount : remainingDue, currency)}
+            </p>
+            <p className="font-body text-[12px] text-on-surface-variant mt-0.5">
+              {t('invoice.pay.title')}
+            </p>
+            {awaitingVerification && (
+              <div className="w-full mt-3 pt-3 border-t border-outline-variant/25 flex items-start gap-2 text-left">
+                <span className="material-symbols-outlined text-amber-600 text-[16px] leading-none mt-0.5" aria-hidden="true">hourglass_top</span>
+                <p className="font-body text-[11px] text-amber-700 leading-relaxed">
+                  {t('invoice.pay.pendingNotice')}
+                </p>
+              </div>
+            )}
+          </div>
+        </Lightbox>
       )}
     </div>
   );
