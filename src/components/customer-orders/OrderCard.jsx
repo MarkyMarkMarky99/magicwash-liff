@@ -18,6 +18,7 @@ import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
 export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
   const { t, i18n } = useTranslation();
   const dateLocale = getDateLocale(i18n.language);
+  const hasInvoice = Boolean(order.invoiceNumber);
   const cfg = STATUS_CONFIG[order.status] ?? {
     icon: 'receipt_long',
     badge: 'bg-gray-100 text-gray-600',
@@ -56,20 +57,24 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
           <p className="font-body text-xs text-on-surface-variant truncate">
             {order.note || order.serviceType || ''}
           </p>
-          <div className="flex items-center gap-2 shrink-0">
-            <a
-              href={`https://magicwash-laundry.com/order?ord=${encodeURIComponent(order.orderId)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              aria-label={t('customerOrders.viewInvoice')}
-              className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
-            >
-              <span className="material-symbols-outlined text-[14px]">receipt_long</span>
-            </a>
+          <div
+            className="flex items-center gap-2 shrink-0"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {hasInvoice && (
+              <a
+                href={`https://magicwash-laundry.com/order?ord=${encodeURIComponent(order.orderId)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t('customerOrders.viewInvoice')}
+                className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+              >
+                <span className="material-symbols-outlined text-[14px]">receipt_long</span>
+              </a>
+            )}
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onViewPhotos?.(order.orderId); }}
+              onClick={() => onViewPhotos?.(order.orderId)}
               aria-label={t('customerOrders.viewPhotos')}
               className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
             >

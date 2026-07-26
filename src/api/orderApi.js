@@ -1,15 +1,18 @@
 import { gvizSwrFetch, cacheKey, lsSet } from './localCache';
 
-const ORDERS_VIEW_COLS = 'orderId,customerId,orderNumber,receivedDate,dueDate,serviceType,status,quantity,note,itemsJson';
+const ORDERS_VIEW_COLS = 'orderId,customerId,orderNumber,invoiceNumber,receivedDate,dueDate,serviceType,status,quantity,note,itemsJson';
 
 function transformOrder(row) {
   let items = [];
   try { items = JSON.parse(row.itemsJson ?? '[]'); } catch { items = []; }
-  return { ...row, items };
+  const invoiceNumber = typeof row.invoiceNumber === 'string'
+    ? row.invoiceNumber.trim() || null
+    : null;
+  return { ...row, invoiceNumber, items };
 }
 
 function preWarm(orders) {
-  orders.forEach((order) => lsSet(cacheKey('ordersViewV2', order.orderId), [order]));
+  orders.forEach((order) => lsSet(cacheKey('ordersViewV3', order.orderId), [order]));
   return orders;
 }
 
@@ -25,7 +28,7 @@ export async function getOrdersByCustomerId(customerId, onRevalidate) {
     transformOrder,
     onRevalidate ? (rows) => onRevalidate(preWarm(rows)) : null,
     ORDERS_VIEW_COLS,
-    'ordersViewV2',
+    'ordersViewV3',
   );
   return preWarm(rows);
 }
@@ -42,7 +45,7 @@ export async function getOrderById(orderId, onRevalidate) {
     transformOrder,
     onRevalidate ? (rows) => onRevalidate(rows[0] ?? null) : null,
     ORDERS_VIEW_COLS,
-    'ordersViewV2',
+    'ordersViewV3',
   );
   return rows[0] ?? null;
 }

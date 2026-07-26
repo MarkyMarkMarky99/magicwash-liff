@@ -16,6 +16,7 @@ export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onSch
   const dragStartYRef = useRef(0);
   const latestDragOffsetRef = useRef(0);
   const sheetRef = useRef(null);
+  const hasInvoice = Boolean(order?.invoiceNumber);
 
   // Trigger slide-up after mount
   useEffect(() => {
@@ -152,15 +153,17 @@ export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onSch
                 </button>
               )}
               <div className="flex gap-2">
-                <a
-                  href={`https://magicwash-laundry.com/order?ord=${encodeURIComponent(orderId)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary text-primary hover:bg-primary/5 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
-                >
-                  <span className="material-symbols-outlined text-[16px] leading-none">receipt_long</span>
-                  {t('customerOrders.viewInvoice')}
-                </a>
+                {hasInvoice && (
+                  <a
+                    href={`https://magicwash-laundry.com/order?ord=${encodeURIComponent(orderId)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary text-primary hover:bg-primary/5 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[16px] leading-none">receipt_long</span>
+                    {t('customerOrders.viewInvoice')}
+                  </a>
+                )}
                 <button
                   onClick={() => onViewPhotos?.(orderId)}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
