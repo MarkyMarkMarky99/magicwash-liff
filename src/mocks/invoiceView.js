@@ -1,6 +1,15 @@
 // Mock rows shaped like the customer-facing InvoiceView Google Sheet.
 // Nested values remain JSON strings to match the raw GViz response.
 
+const localInvoiceViewLists = import.meta.glob('./invoice-view-list-latest-20.json', {
+  eager: true,
+  import: 'default',
+});
+const latestInvoiceViewList = localInvoiceViewLists['./invoice-view-list-latest-20.json'];
+const latestInvoiceViewRows = Array.isArray(latestInvoiceViewList?.data)
+  ? latestInvoiceViewList.data
+  : [];
+
 const proofUrl = 'https://lh3.googleusercontent.com/d/1pibhghFc3OkCSaMhIig8fosrL5DBB3Kk';
 
 export const mockInvoiceCustomer = {
@@ -25,7 +34,7 @@ export const mockOrganizationInvoiceCustomer = {
   address: '88 ถนนรัชดาภิเษก แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400',
 };
 
-export const mockInvoiceViewRows = [
+const handcraftedMockInvoiceViewRows = [
   {
     invoiceNumber: 'INV-2026-000101',
     status: 'DRAFT',
@@ -259,4 +268,9 @@ export const mockInvoiceViewRows = [
     paidAmount: 500,
     balanceDue: 0,
   },
+];
+
+export const mockInvoiceViewRows = [
+  ...handcraftedMockInvoiceViewRows,
+  ...latestInvoiceViewRows,
 ];
