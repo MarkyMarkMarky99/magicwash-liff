@@ -21,29 +21,33 @@ export const columns = [
   'balanceDue',
 ];
 
+// Verified against the live InvoicesView header row: the portal sheet uses
+// camelCase headers, unlike the snake_case source tables in the Invoices
+// spreadsheet.
 export const headers = [
-  'invoice_number',
+  'invoiceNumber',
   'status',
-  'billing_type',
-  'billing_period_start',
-  'billing_period_end',
-  'issued_date',
-  'due_date',
-  'customer_id',
-  'customer_json',
-  'items_json',
-  'adjustments_json',
-  'payments_json',
-  'subtotal',
-  'adjustment_total',
-  'grand_total',
-  'paid_amount',
-  'balance_due',
-];
-
-export const dateColumns = new Set([
+  'billingType',
   'billingPeriodStart',
   'billingPeriodEnd',
+  'issuedDate',
+  'dueDate',
+  'customerId',
+  'customerJson',
+  'itemsJson',
+  'adjustmentsJson',
+  'paymentsJson',
+  'subtotal',
+  'adjustmentTotal',
+  'grandTotal',
+  'paidAmount',
+  'balanceDue',
+];
+
+// Only the columns the sheet actually stores as date cells. billingPeriodStart
+// and billingPeriodEnd are plain ISO strings written by the view builder, so
+// they need no GViz date conversion.
+export const dateColumns = new Set([
   'issuedDate',
   'dueDate',
 ]);
@@ -65,8 +69,11 @@ export const schema = {
     },
     status: {
       type: 'string',
-      enum: ['DRAFT', 'UNPAID', 'OVERDUE', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'VOID'],
-      description: 'Display status derived from invoice lifecycle, due date, totals, and verified payments.',
+      enum: ['UNPAID', 'OVERDUE', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'VOID'],
+      description:
+        'Display status derived from invoice lifecycle, due date, totals, and verified payments. ' +
+        'Invoices.status ISSUED expands here into UNPAID, PARTIALLY_PAID, PAID, or OVERDUE; ' +
+        'CANCELLED and VOID pass through unchanged. DRAFT invoices are never emitted into this view.',
     },
     billingType: {
       type: 'string',
@@ -84,11 +91,11 @@ export const schema = {
       description: 'End date of a CYCLE billing period, otherwise null.',
     },
     issuedDate: {
-      type: 'string',
+      type: ['string', 'null'],
       format: 'date',
     },
     dueDate: {
-      type: 'string',
+      type: ['string', 'null'],
       format: 'date',
     },
     customerId: {
@@ -96,12 +103,12 @@ export const schema = {
       description: 'Customer identifier for this invoice — same value as customer.customerCode inside customerJson (customerCode is the actual customer id, not a separate display code). Promoted to a top-level column so invoices can be queried by customer (e.g. filterField=customerId), since GViz cannot filter on a value nested inside a JSON string cell.',
     },
     customerJson: {
-      type: 'string',
+      type: ['string', 'null'],
       contentMediaType: 'application/json',
       contentSchema: { $ref: '#/$defs/customer' },
     },
     itemsJson: {
-      type: 'string',
+      type: ['string', 'null'],
       contentMediaType: 'application/json',
       contentSchema: {
         type: 'array',
@@ -109,7 +116,7 @@ export const schema = {
       },
     },
     adjustmentsJson: {
-      type: 'string',
+      type: ['string', 'null'],
       contentMediaType: 'application/json',
       contentSchema: {
         type: 'array',
@@ -118,7 +125,7 @@ export const schema = {
       description: 'Resolved invoice-level adjustments. Item-level adjustments remain with their item.',
     },
     paymentsJson: {
-      type: 'string',
+      type: ['string', 'null'],
       contentMediaType: 'application/json',
       contentSchema: {
         type: 'array',
@@ -126,11 +133,11 @@ export const schema = {
       },
     },
     subtotal: {
-      type: 'number',
+      type: ['number', 'null'],
       description: 'Sum of item subtotals before item-level and invoice-level adjustments.',
     },
     adjustmentTotal: {
-      type: 'number',
+      type: ['number', 'null'],
       description: 'Sum of resolved item-level and invoice-level adjustment amounts.',
     },
     grandTotal: {
@@ -138,7 +145,7 @@ export const schema = {
       description: 'Invoice total after all adjustments.',
     },
     paidAmount: {
-      type: 'number',
+      type: ['number', 'null'],
       description: 'Sum of signed VERIFIED payment amounts. Refunds reduce this value.',
     },
     balanceDue: {
@@ -147,6 +154,24 @@ export const schema = {
     },
   },
   allOf: [
+    {
+      // Periods are only pinned to null for a row that positively says it is an
+      // ORDER invoice. A missing billingType means the column was dropped from
+      // the sheet, not that the invoice stopped being a CYCLE one, so neither
+      // branch should reject it.
+      if: {
+        properties: {
+          billingType: { const: 'ORDER' },
+        },
+        required: ['billingType'],
+      },
+      then: {
+        properties: {
+          billingPeriodStart: { type: 'null' },
+          billingPeriodEnd: { type: 'null' },
+        },
+      },
+    },
     {
       if: {
         properties: {
@@ -158,12 +183,6 @@ export const schema = {
         properties: {
           billingPeriodStart: { type: 'string' },
           billingPeriodEnd: { type: 'string' },
-        },
-      },
-      else: {
-        properties: {
-          billingPeriodStart: { type: 'null' },
-          billingPeriodEnd: { type: 'null' },
         },
       },
     },
@@ -236,6 +255,12 @@ export const schema = {
       ],
       additionalProperties: false,
       properties: {
+        sourceOrderId: {
+          type: ['string', 'null'],
+          description:
+            'Order this line was billed from, or null when the line was added directly to the invoice. ' +
+            'A CYCLE invoice combines several orders, so lines within one invoice can reference different orders.',
+        },
         serviceType: {
           type: ['string', 'null'],
         },
@@ -257,6 +282,10 @@ export const schema = {
         },
         adjustments: {
           type: 'array',
+          description:
+            'Resolved item-level adjustments. In InvoiceItems these are applied per unit, so each amount ' +
+            'here is already multiplied by quantity and represents the whole line ' +
+            '(a FIXED -10 on quantity 10 appears as -100). netTotal equals subtotal plus the sum of these amounts.',
           items: { $ref: '#/$defs/adjustment' },
         },
         netTotal: {
