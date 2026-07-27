@@ -41,6 +41,7 @@ No test suite — there are no test files in this project.
   - `?dev=active&state=<unpaid-no-delivery|paid-no-delivery|paid-with-delivery>` → `ActiveOrder` preview (uses mock data from `src/mocks/`)
   - `?dev=confirm` → `ConfirmBooking` preview (uses inline mock data)
   - `?dev=invoice&invoiceNumber=<number>` → `InvoicePreview` preview (uses synthetic mock data; development-only)
+  - `?invoiceNumber=<number>` → public `InvoicePreview` page (bypasses LIFF; fetches exactly one invoice by number)
 - **URL param naming:** Route key is a boolean flag (`?photos`, `?orders`). Additional params use the actual field name from the schema (`orderId`, `custId`). `id` is reserved for primary-key-only lookups.
 - **State Management:** No Redux, Zustand, or global Context. State is per-page `useState`, except `HeaderContext` for back-button coordination.
 - **Data Layer:** API reads use Stale-While-Revalidate: return cache immediately, call `onRevalidate(freshData)` when background fetch completes.

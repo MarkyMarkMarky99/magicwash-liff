@@ -15,7 +15,7 @@ import InvoicePreview from './pages/InvoicePreview';
 
 /** Pages use this context to set / clear the header's back button. */
 export const HeaderContext = createContext(null);
-const DEV_INVOICE_BACK = () => {
+const INVOICE_BACK = () => {
   if (window.history.length > 1) window.history.back();
 };
 
@@ -96,15 +96,37 @@ export default function App() {
     );
   }
 
-  // Dev-only preview: the mock row keeps this route independent of customer data.
-  if (import.meta.env.DEV && params.get('dev') === 'invoice') {
-    const mockRow = getDevInvoiceViewRow(params.get('invoiceNumber'));
+  // Dev-only preview: keep this branch ahead of the production route so a
+  // production URL with both ?dev=invoice and ?invoiceNumber=... cannot fetch
+  // a real invoice. Outside DEV it stays on the existing unavailable state.
+  if (params.get('dev') === 'invoice') {
+    if (import.meta.env.DEV) {
+      const mockRow = getDevInvoiceViewRow(params.get('invoiceNumber'));
+      return (
+        <AppShell>
+          <InvoicePreview
+            invoiceNumber={mockRow.invoiceNumber}
+            mockRow={mockRow}
+            onBack={INVOICE_BACK}
+          />
+        </AppShell>
+      );
+    }
+
+    return (
+      <AppShell>
+        <InvoicePreview />
+      </AppShell>
+    );
+  }
+
+  // Public invoice route: render directly without LIFF or registration.
+  if (params.has('invoiceNumber')) {
     return (
       <AppShell>
         <InvoicePreview
-          invoiceNumber={mockRow.invoiceNumber}
-          mockRow={mockRow}
-          onBack={DEV_INVOICE_BACK}
+          invoiceNumber={params.get('invoiceNumber')}
+          onBack={INVOICE_BACK}
         />
       </AppShell>
     );
