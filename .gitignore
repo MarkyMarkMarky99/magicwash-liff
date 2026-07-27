@@ -31,3 +31,6 @@ dist-ssr
 # Claude Code local config
 .claude/
 .codex/
+
+# Local UI prototypes, not part of the app build
+/src/prototypes/
