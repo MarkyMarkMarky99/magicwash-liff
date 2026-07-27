@@ -61,9 +61,28 @@ export function gvizUrl({ source, tq, filterField, filterValue, sortField, sortD
   return `/api/gviz?${params.toString()}`;
 }
 
+// Cache versions live here so readers and writers cannot drift apart.
+const CACHE_VERSIONS = {
+  ordersView: 3,
+  invoiceView: 1,
+};
+
+function cacheResourceName(resource) {
+  const match = String(resource).match(/^(.*)V\d+$/);
+  const base = match ? match[1] : String(resource);
+  const version = CACHE_VERSIONS[base];
+  return version == null ? String(resource) : `${base}V${version}`;
+}
+
 // --- HTTP helpers ---
 
-export const cacheKey = (resource, id) => `mw:${resource}:${id}`;
+export const cacheKey = (resource, id) => `mw:${cacheResourceName(resource)}:${id}`;
+
+function clearLegacyCacheKey(resource, id) {
+  const base = String(resource).replace(/V\d+$/, '');
+  const legacyKey = `mw:${base}:${id}`;
+  if (legacyKey !== cacheKey(resource, id)) lsClear(legacyKey);
+}
 
 export async function apiPost(table, payload) {
   const res = await fetch('/api/write', {
@@ -95,6 +114,7 @@ export async function fetchAndCache(url, key, transform = (r) => r) {
 
 export function gvizSwrFetch(source, filterSpec, id, transform = (r) => r, onRevalidate, cols, cacheResource = source) {
   const url = gvizUrl({ source, cols, ...filterSpec });
+  clearLegacyCacheKey(cacheResource, id);
   return swrFetch(url, cacheKey(cacheResource, id), transform, onRevalidate);
 }
 

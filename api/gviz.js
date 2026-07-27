@@ -59,15 +59,27 @@ export default async function handler(req, res) {
     });
   }
 
+  const hasFilterField = typeof filterField === 'string' && filterField !== '';
+  if (hasFilterField && filterValue == null) {
+    return res.status(400).json({ error: 'filterValue is required when filterField is provided' });
+  }
+  if (!hasFilterField && filterValue != null) {
+    return res.status(400).json({ error: 'filterField is required when filterValue is provided' });
+  }
+
   const query = tq || 'SELECT *';
-  const { rows, error } = await fetchGvizMapped(source, query);
+  const { rows, error } = await fetchGvizMapped(
+    source,
+    query,
+    hasFilterField ? { field: filterField, value: filterValue } : null,
+  );
   if (error) return res.status(502).json({ error });
 
   let result = rows;
 
   // Equality filter (string-coerced, same looseness as former gvizStr WHERE clauses)
-  if (filterField != null && filterField !== '') {
-    const want = String(filterValue ?? '');
+  if (hasFilterField) {
+    const want = String(filterValue);
     result = result.filter((row) => String(row[filterField] ?? '') === want);
   }
 
@@ -82,10 +94,14 @@ export default async function handler(req, res) {
       if (aNull && bNull) return 0;
       if (aNull) return 1;
       if (bNull) return -1;
-      const as = String(av);
-      const bs = String(bv);
-      if (as < bs) return desc ? 1 : -1;
-      if (as > bs) return desc ? -1 : 1;
+      const an = Number(av);
+      const bn = Number(bv);
+      const bothNumeric = Number.isFinite(an) && Number.isFinite(bn)
+        && String(av).trim() !== '' && String(bv).trim() !== '';
+      const left = bothNumeric ? an : String(av);
+      const right = bothNumeric ? bn : String(bv);
+      if (left < right) return desc ? 1 : -1;
+      if (left > right) return desc ? -1 : 1;
       return 0;
     });
   }

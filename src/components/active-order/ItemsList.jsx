@@ -14,6 +14,7 @@ export default function ItemsList({ items = [] }) {
       icon="checkroom"
       title={t('activeOrder.items.title')}
       badge={`${items.length} ${t('activeOrder.items.count')}`}
+      collapsible
     >
       {items.length === 0 ? (
         <p className="px-6 py-4 text-sm text-on-surface-variant italic">

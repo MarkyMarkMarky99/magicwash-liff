@@ -181,6 +181,8 @@ export default function CustomerOrders({ custId }) {
                     customer={customer}
                     customerCodeLabel={t('customerOrders.customerNo')}
                     customerCode={customerNumber}
+                    customerType={customer?.customerType}
+                    customerTypeLabel={t('customerOrders.type')}
                   />
                 </div>
                 <div className="flex-1 px-4 pb-6">

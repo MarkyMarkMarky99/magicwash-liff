@@ -40,6 +40,7 @@ No test suite — there are no test files in this project.
   - `?dev=chat` → `OrderChat` preview
   - `?dev=active&state=<unpaid-no-delivery|paid-no-delivery|paid-with-delivery>` → `ActiveOrder` preview (uses mock data from `src/mocks/`)
   - `?dev=confirm` → `ConfirmBooking` preview (uses inline mock data)
+  - `?dev=invoice&invoiceNumber=<number>` → `InvoicePreview` preview (uses synthetic mock data; development-only)
 - **URL param naming:** Route key is a boolean flag (`?photos`, `?orders`). Additional params use the actual field name from the schema (`orderId`, `custId`). `id` is reserved for primary-key-only lookups.
 - **State Management:** No Redux, Zustand, or global Context. State is per-page `useState`, except `HeaderContext` for back-button coordination.
 - **Data Layer:** API reads use Stale-While-Revalidate: return cache immediately, call `onRevalidate(freshData)` when background fetch completes.
@@ -52,7 +53,7 @@ No test suite — there are no test files in this project.
 ### Reading data (`api/gviz.js`)
 - Endpoint: `GET /api/gviz?source=<key>&filterField=<camelCase>&filterValue=<value>&sortField=<camelCase>&sortDir=<asc|desc>&limit=<n>&cols=<comma-list>`
 - `source` is a validated key from `SOURCE_MAP` in `api/_gviz.js` — never pass raw sheet names or spreadsheet IDs from the frontend.
-- **Never filter/sort by GViz column letter** (`WHERE B='...'`, `ORDER BY D`). Column letters shift whenever someone inserts a column in the sheet, which silently breaks any query hard-coding one — this is exactly what corrupted `OrdersView` reads in production once. Use `filterField`/`sortField` with the schema's camelCase field name instead; the server resolves the field to its current column by matching the live sheet header, on every request.
+- **Never filter/sort by GViz column letter** (`WHERE B='...'`, `ORDER BY D`). Column letters shift whenever someone inserts a column in the sheet, which silently breaks any query hard-coding one — this is exactly what corrupted `OrdersView` reads in production once. Use `filterField`/`sortField` with the schema's camelCase field name instead; the server resolves filter fields to the current column by matching the live sheet header, with a short-lived module cache in warm serverless instances.
 - `tq` (raw GViz SQL) is still accepted and defaults to `SELECT *` when omitted, for advanced cases — but it must never contain a letter-addressed `WHERE`/`ORDER BY`. A `tq` filter runs inside Google's own query engine before row-mapping ever sees the data, so it cannot be made header-safe the way `filterField`/`sortField` are.
 - Responses are **named-key objects** (`{ orderId, customerId, ... }`), never positional `c0/c1/...`. `mapRow()` in `api/_gviz.js` resolves each field by matching the schema's `headers[i]` against the sheet's actual live header row (`table.cols[i].label`) — never by trusting that `columns[i]` lines up with a column's position.
 - Date/date-time columns are automatically converted from GViz `Date(yyyy,m,d)` format to ISO strings server-side. Clients do **not** need to call `gvizDateToISO` on GViz responses.
@@ -66,6 +67,7 @@ No test suite — there are no test files in this project.
 | `laundryItems` | LaundryItems | `GVIZ_LAUNDRY_ITEMS_SPREADSHEET_ID` |
 | `orderItemForms` | OrderItemForms | `GVIZ_SPREADSHEET_ID` |
 | `ordersView` | OrdersView | `GVIZ_PORTAL_SPREADSHEET_ID` |
+| `invoiceView` | InvoicesView | `GVIZ_PORTAL_SPREADSHEET_ID` |
 | `orders` | Orders | `GVIZ_ORDERS_SPREADSHEET_ID` |
 | `orderItems` | OrderItems | `GVIZ_ORDERS_SPREADSHEET_ID` |
 

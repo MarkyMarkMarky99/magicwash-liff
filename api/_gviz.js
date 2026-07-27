@@ -31,14 +31,85 @@ export function gvizDateToISO(v) {
   return `${m[1]}-${String(Number(m[2]) + 1).padStart(2, '0')}-${String(Number(m[3])).padStart(2, '0')}`;
 }
 
-// Strip single quotes to prevent GViz query injection
-export function sanitize(val) {
-  return String(val ?? '').replace(/'/g, '');
-}
-
 /** Case/punctuation-insensitive header comparison key, e.g. "Order ID", "order_id", "orderId" all -> "orderid". */
 function normalizeHeader(s) {
   return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+const HEADER_CACHE_TTL_MS = 5 * 60 * 1000;
+const liveHeaderCache = new Map();
+
+function gvizUrl(source, tq) {
+  const entry = SOURCE_MAP[source];
+  return (
+    `https://docs.google.com/spreadsheets/d/${entry.spreadsheetId}/gviz/tq` +
+    `?sheet=${encodeURIComponent(entry.sheetName)}` +
+    `&tq=${encodeURIComponent(tq)}` +
+    '&tqx=out:json'
+  );
+}
+
+function columnIndexToLetter(index) {
+  let n = index + 1;
+  let result = '';
+  while (n > 0) {
+    const remainder = (n - 1) % 26;
+    result = String.fromCharCode(65 + remainder) + result;
+    n = Math.floor((n - 1) / 26);
+  }
+  return result;
+}
+
+function quoteGvizString(value) {
+  return JSON.stringify(String(value));
+}
+
+function createHeaderIndex(cols, sheetName) {
+  const headerIndex = new Map();
+  const firstLabels = new Map();
+  const duplicates = [];
+
+  cols.forEach((label, i) => {
+    const norm = normalizeHeader(label);
+    if (!norm) return;
+    if (headerIndex.has(norm)) {
+      duplicates.push(`"${firstLabels.get(norm)}" / "${label}"`);
+      return;
+    }
+    headerIndex.set(norm, i);
+    firstLabels.set(norm, label);
+  });
+
+  if (duplicates.length) {
+    const error = `Sheet "${sheetName}" has duplicate normalized header(s): ${duplicates.join(', ')}. Rename the conflicting headers.`;
+    console.error(`[GViz] ${error}`);
+    return { headerIndex: null, error };
+  }
+
+  return { headerIndex, error: null };
+}
+
+async function getLiveHeaderInfo(source) {
+  const cached = liveHeaderCache.get(source);
+  if (cached && cached.expiresAt > Date.now()) return cached.info;
+
+  const { cols } = await _fetchRaw(gvizUrl(source, 'SELECT * LIMIT 0'));
+  const info = createHeaderIndex(cols, SOURCE_MAP[source].sheetName);
+  if (info.error) return info;
+
+  liveHeaderCache.set(source, { expiresAt: Date.now() + HEADER_CACHE_TTL_MS, info });
+  return info;
+}
+
+function addEqualityFilter(query, columnIndex, value) {
+  const base = query.trim().replace(/;\s*$/, '');
+  const condition = `${columnIndexToLetter(columnIndex)} = ${quoteGvizString(value)}`;
+  const clausePattern = /\b(group\s+by|pivot|order\s+by|limit|offset|label|format|options)\b/i;
+  const clause = base.match(clausePattern);
+  const insertAt = clause ? clause.index : base.length;
+  const prefix = base.slice(0, insertAt);
+  const suffix = base.slice(insertAt);
+  return `${prefix}${/\bwhere\b/i.test(base) ? ` AND ${condition}` : ` WHERE ${condition}`}${suffix}`;
 }
 
 /**
@@ -71,22 +142,30 @@ async function _fetchRaw(url) {
   return { cols, rows };
 }
 
-export async function fetchGvizMapped(source, tq) {
+export async function fetchGvizMapped(source, tq, filterSpec = null) {
   const entry = SOURCE_MAP[source];
-  const url = (
-    `https://docs.google.com/spreadsheets/d/${entry.spreadsheetId}/gviz/tq` +
-    `?sheet=${encodeURIComponent(entry.sheetName)}` +
-    `&tq=${encodeURIComponent(tq)}` +
-    `&tqx=out:json`
-  );
   try {
-    const { cols, rows } = await _fetchRaw(url);
+    let query = tq;
+    if (filterSpec?.field) {
+      const liveHeaders = await getLiveHeaderInfo(source);
+      if (liveHeaders.error) return { rows: [], error: liveHeaders.error };
 
-    const headerIndex = new Map();
-    cols.forEach((label, i) => {
-      const norm = normalizeHeader(label);
-      if (norm && !headerIndex.has(norm)) headerIndex.set(norm, i); // first occurrence wins on duplicate headers
-    });
+      const fieldIndex = entry.columns.indexOf(filterSpec.field);
+      const expectedHeader = entry.headers[fieldIndex];
+      const columnIndex = liveHeaders.headerIndex.get(normalizeHeader(expectedHeader));
+      if (columnIndex == null) {
+        return {
+          rows: [],
+          error: `Sheet "${entry.sheetName}" is missing filter header for "${filterSpec.field}" (${expectedHeader}).`,
+        };
+      }
+      query = addEqualityFilter(query, columnIndex, filterSpec.value);
+    }
+
+    const { cols, rows } = await _fetchRaw(gvizUrl(source, query));
+
+    const { headerIndex, error: duplicateError } = createHeaderIndex(cols, entry.sheetName);
+    if (duplicateError) return { rows: [], error: duplicateError };
 
     const requiredHeaders = (entry.required ?? []).map((field) => entry.headers[entry.columns.indexOf(field)]);
     const missing = requiredHeaders.filter((h) => !headerIndex.has(normalizeHeader(h)));

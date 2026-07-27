@@ -9,6 +9,7 @@ import CustomerOrders from './pages/CustomerOrders';
 import ActiveOrder from './pages/ActiveOrder';
 import LanguageSwitcher from './components/ui/LanguageSwitcher';
 import { getMockActiveOrder } from './mocks/activeOrder';
+import { getDevInvoiceViewRow } from './mocks/invoiceDev';
 import ConfirmBooking from './pages/ConfirmBooking';
 import InvoicePreview from './pages/InvoicePreview';
 
@@ -91,6 +92,20 @@ export default function App() {
     return (
       <AppShell>
         <CustomerOrders custId={params.get('custId')} />
+      </AppShell>
+    );
+  }
+
+  // Dev-only preview: the mock row keeps this route independent of customer data.
+  if (import.meta.env.DEV && params.get('dev') === 'invoice') {
+    const mockRow = getDevInvoiceViewRow(params.get('invoiceNumber'));
+    return (
+      <AppShell>
+        <InvoicePreview
+          invoiceNumber={mockRow.invoiceNumber}
+          mockRow={mockRow}
+          onBack={DEV_INVOICE_BACK}
+        />
       </AppShell>
     );
   }
@@ -185,18 +200,6 @@ function AppMain() {
           order={mock.order}
           pickupAppointment={mock.pickupAppointment}
           deliveryAppointment={mock.deliveryAppointment}
-        />
-      </AppShell>
-    );
-  }
-
-  // Dev preview: ?dev=invoice[&invoiceNumber=INV-2026-000102]
-  if (devParam === 'invoice') {
-    return (
-      <AppShell>
-        <InvoicePreview
-          invoiceNumber={new URLSearchParams(window.location.search).get('invoiceNumber')}
-          onBack={DEV_INVOICE_BACK}
         />
       </AppShell>
     );

@@ -53,7 +53,10 @@ export const schema = {
   title: 'InvoiceView',
   description: 'Customer-facing invoice data, preprocessed from Invoices, InvoiceItems, and Payments.',
   type: 'object',
-  required: columns,
+  // Only fields needed to identify and summarize an invoice are required
+  // headers. Nested payloads and secondary totals remain nullable so a
+  // harmless sheet-column addition/removal does not take the whole view down.
+  required: ['invoiceNumber', 'status', 'customerId', 'grandTotal', 'balanceDue'],
   additionalProperties: false,
   properties: {
     invoiceNumber: {

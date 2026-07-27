@@ -12,7 +12,7 @@ function transformOrder(row) {
 }
 
 function preWarm(orders) {
-  orders.forEach((order) => lsSet(cacheKey('ordersViewV3', order.orderId), [order]));
+  orders.forEach((order) => lsSet(cacheKey('ordersView', order.orderId), [order]));
   return orders;
 }
 
@@ -28,7 +28,7 @@ export async function getOrdersByCustomerId(customerId, onRevalidate) {
     transformOrder,
     onRevalidate ? (rows) => onRevalidate(preWarm(rows)) : null,
     ORDERS_VIEW_COLS,
-    'ordersViewV3',
+    'ordersView',
   );
   return preWarm(rows);
 }
@@ -45,7 +45,7 @@ export async function getOrderById(orderId, onRevalidate) {
     transformOrder,
     onRevalidate ? (rows) => onRevalidate(rows[0] ?? null) : null,
     ORDERS_VIEW_COLS,
-    'ordersViewV3',
+    'ordersView',
   );
   return rows[0] ?? null;
 }

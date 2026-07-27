@@ -345,12 +345,12 @@ function TotalRow({ label, value, tone = 'default' }) {
 
 const NOOP = () => {};
 
-export default function InvoicePreview({ invoiceNumber, onBack = NOOP }) {
+export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow = null }) {
   const { t, i18n } = useTranslation();
   const setOnBack = useContext(HeaderContext);
   const requestedInvoiceNumber = toText(invoiceNumber);
-  const [row, setRow] = useState(null);
-  const [status, setStatus] = useState(requestedInvoiceNumber ? 'loading' : 'notFound');
+  const [row, setRow] = useState(mockRow);
+  const [status, setStatus] = useState(mockRow ? 'done' : requestedInvoiceNumber ? 'loading' : 'notFound');
   const [retryCount, setRetryCount] = useState(0);
   const [proofUrl, setProofUrl] = useState(null); // open slip lightbox, or null
   const [payOpen, setPayOpen] = useState(false);  // QR payment popup
@@ -363,6 +363,10 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP }) {
 
   useEffect(() => {
     let active = true;
+
+    if (mockRow) {
+      return () => { active = false; };
+    }
 
     if (!requestedInvoiceNumber) {
       return () => { active = false; };
@@ -386,17 +390,22 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP }) {
       });
 
     return () => { active = false; };
-  }, [requestedInvoiceNumber, retryCount]);
+  }, [mockRow, requestedInvoiceNumber, retryCount]);
 
   const closeProof = useCallback(() => setProofUrl(null), []);
   const closePay = useCallback(() => setPayOpen(false), []);
   const handleRetry = useCallback(() => {
-    setRow(null);
     setProofUrl(null);
     setPayOpen(false);
+    if (mockRow) {
+      setRow(mockRow);
+      setStatus('done');
+      return;
+    }
+    setRow(null);
     setStatus('loading');
     setRetryCount((count) => count + 1);
-  }, []);
+  }, [mockRow]);
 
   const dateLocale = getDateLocale(i18n.language);
   const invoice = readInvoice(row);
