@@ -1,15 +1,15 @@
-// Shared GViz utilities — imported by api/gviz.js
+// Shared GViz utilities for the /api/gviz route.
 
-import { columns as orderFormColumns,     dateColumns as orderFormDates,     headers as orderFormHeaders,     schema as orderFormSchema     } from './schemas/orderForm.js';
-import { columns as customersColumns,     dateColumns as customersDates,     headers as customersHeaders,     schema as customersSchema     } from './schemas/customers.js';
-import { columns as laundryItemsColumns,  dateColumns as laundryItemsDates,  headers as laundryItemsHeaders,  schema as laundryItemsSchema  } from './schemas/laundryItems.js';
-import { columns as laundryPhotosColumns, dateColumns as laundryPhotosDates, headers as laundryPhotosHeaders, schema as laundryPhotosSchema } from './schemas/laundryPhotos.js';
-import { columns as orderItemFormsColumns,dateColumns as orderItemFormsDates,headers as orderItemFormsHeaders,schema as orderItemFormsSchema} from './schemas/orderItemForms.js';
-import { columns as ordersViewColumns,    dateColumns as ordersViewDates,    headers as ordersViewHeaders,    schema as ordersViewSchema    } from './schemas/ordersView.js';
-import { columns as ordersColumns,        dateColumns as ordersDates,        headers as ordersHeaders,        schema as ordersSchema        } from './schemas/orders.js';
-import { columns as orderItemsColumns,    dateColumns as orderItemsDates,    headers as orderItemsHeaders,    schema as orderItemsSchema    } from './schemas/orderItems.js';
-import { columns as appointmentsColumns,  dateColumns as appointmentsDates,  headers as appointmentsHeaders,  schema as appointmentsSchema  } from './schemas/appointments.js';
-import { columns as invoiceViewColumns,    dateColumns as invoiceViewDates,    headers as invoiceViewHeaders,    schema as invoiceViewSchema    } from './schemas/invoiceView.js';
+import { columns as orderFormColumns,     dateColumns as orderFormDates,     headers as orderFormHeaders,     schema as orderFormSchema     } from '../server/schemas/orderForm.js';
+import { columns as customersColumns,     dateColumns as customersDates,     headers as customersHeaders,     schema as customersSchema     } from '../server/schemas/customers.js';
+import { columns as laundryItemsColumns,  dateColumns as laundryItemsDates,  headers as laundryItemsHeaders,  schema as laundryItemsSchema  } from '../server/schemas/laundryItems.js';
+import { columns as laundryPhotosColumns, dateColumns as laundryPhotosDates, headers as laundryPhotosHeaders, schema as laundryPhotosSchema } from '../server/schemas/laundryPhotos.js';
+import { columns as orderItemFormsColumns,dateColumns as orderItemFormsDates,headers as orderItemFormsHeaders,schema as orderItemFormsSchema} from '../server/schemas/orderItemForms.js';
+import { columns as ordersViewColumns,    dateColumns as ordersViewDates,    headers as ordersViewHeaders,    schema as ordersViewSchema    } from '../server/schemas/ordersView.js';
+import { columns as ordersColumns,        dateColumns as ordersDates,        headers as ordersHeaders,        schema as ordersSchema        } from '../server/schemas/orders.js';
+import { columns as orderItemsColumns,    dateColumns as orderItemsDates,    headers as orderItemsHeaders,    schema as orderItemsSchema    } from '../server/schemas/orderItems.js';
+import { columns as appointmentsColumns,  dateColumns as appointmentsDates,  headers as appointmentsHeaders,  schema as appointmentsSchema  } from '../server/schemas/appointments.js';
+import { columns as invoiceViewColumns,    dateColumns as invoiceViewDates,    headers as invoiceViewHeaders,    schema as invoiceViewSchema    } from '../server/schemas/invoiceView.js';
 
 export const SOURCE_MAP = {
   orderForm:      { sheetName: 'OrderForm',      spreadsheetId: process.env.GVIZ_SPREADSHEET_ID,          columns: orderFormColumns,      dateColumns: orderFormDates,      headers: orderFormHeaders,      required: orderFormSchema.required      },
@@ -172,7 +172,7 @@ export async function fetchGvizMapped(source, tq, filterSpec = null) {
     if (missing.length) {
       return {
         rows: [],
-        error: `Sheet "${entry.sheetName}" is missing expected header(s): ${missing.join(', ')}. The sheet's columns may have changed — update api/schemas/${source}.js.`,
+        error: `Sheet "${entry.sheetName}" is missing expected header(s): ${missing.join(', ')}. The sheet's columns may have changed — update server/schemas/${source}.js.`,
       };
     }
 
