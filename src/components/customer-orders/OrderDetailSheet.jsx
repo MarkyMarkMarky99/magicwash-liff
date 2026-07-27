@@ -5,7 +5,7 @@ import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
 import DateChip from '../ui/DateChip';
 import SectionCard from '../ui/SectionCard';
 
-export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onScheduleDelivery }) {
+export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onViewInvoice, onScheduleDelivery }) {
   const { t, i18n } = useTranslation();
   const dateLocale = getDateLocale(i18n.language);
   const [order, setOrder] = useState(null);
@@ -154,21 +154,21 @@ export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onSch
               )}
               <div className="flex gap-2">
                 {hasInvoice && (
-                  <a
-                    href={`https://magicwash-laundry.com/order?ord=${encodeURIComponent(orderId)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary text-primary hover:bg-primary/5 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
+                  <button
+                    type="button"
+                    onClick={() => onViewInvoice?.(order.invoiceNumber, orderId)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary text-primary hover:bg-primary/5 active:scale-[0.98] font-label text-[12px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                   >
-                    <span className="material-symbols-outlined text-[16px] leading-none">receipt_long</span>
+                    <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">receipt_long</span>
                     {t('customerOrders.viewInvoice')}
-                  </a>
+                  </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => onViewPhotos?.(orderId)}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
-                  <span className="material-symbols-outlined text-[16px] leading-none">photo_library</span>
+                  <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">photo_library</span>
                   {t('customerOrders.viewPhotos')}
                 </button>
               </div>

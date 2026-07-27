@@ -1,5 +1,8 @@
 {
   "loading": "Loading…",
+  "navigation": {
+    "back": "Back"
+  },
   "register": {
     "pageTitle": "New Customer",
     "heading": "Create Account",
@@ -98,6 +101,8 @@
     "billedTo": "Billed To",
     "customerNo": "Customer No.",
     "notFound": "Invoice not found",
+    "loadError": "Failed to load invoice",
+    "retry": "Try again",
     "close": "Close",
     "pay": {
       "action": "Pay now",

@@ -14,6 +14,9 @@ import InvoicePreview from './pages/InvoicePreview';
 
 /** Pages use this context to set / clear the header's back button. */
 export const HeaderContext = createContext(null);
+const DEV_INVOICE_BACK = () => {
+  if (window.history.length > 1) window.history.back();
+};
 
 /**
  * Shared app shell — renders the single header used by every page.
@@ -21,6 +24,7 @@ export const HeaderContext = createContext(null);
  */
 function AppShell({ children }) {
   const [onBack, setOnBack] = useState(null);
+  const { t } = useTranslation();
 
   return (
     <div className="w-full sm:max-w-[390px] mx-auto bg-surface h-dvh flex flex-col relative sm:border-x sm:border-outline-variant/30 sm:shadow-2xl overflow-hidden">
@@ -28,10 +32,12 @@ function AppShell({ children }) {
         <div className="flex items-center gap-1">
           {onBack && (
             <button
+              type="button"
               onClick={onBack}
-              className="text-on-primary -ml-1.5 mr-0.5 h-7 flex items-center px-1 hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+              aria-label={t('navigation.back')}
+              className="text-on-primary -ml-1.5 mr-0.5 h-7 flex items-center px-1 rounded hover:opacity-70 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-on-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
             >
-              <span className="material-symbols-outlined text-[22px] leading-none">arrow_back</span>
+              <span className="material-symbols-outlined text-[22px] leading-none" aria-hidden="true">arrow_back</span>
             </button>
           )}
           <h1 className="text-lg font-headline font-bold tracking-tight flex items-center gap-2">
@@ -188,7 +194,10 @@ function AppMain() {
   if (devParam === 'invoice') {
     return (
       <AppShell>
-        <InvoicePreview invoiceNumber={new URLSearchParams(window.location.search).get('invoiceNumber')} />
+        <InvoicePreview
+          invoiceNumber={new URLSearchParams(window.location.search).get('invoiceNumber')}
+          onBack={DEV_INVOICE_BACK}
+        />
       </AppShell>
     );
   }

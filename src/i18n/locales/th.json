@@ -1,5 +1,8 @@
 {
   "loading": "กำลังโหลด…",
+  "navigation": {
+    "back": "ย้อนกลับ"
+  },
   "register": {
     "pageTitle": "ลูกค้าใหม่",
     "heading": "สร้างบัญชี",
@@ -90,6 +93,8 @@
     "billedTo": "ออกให้แก่",
     "customerNo": "หมายเลขลูกค้า",
     "notFound": "ไม่พบใบแจ้งหนี้",
+    "loadError": "โหลดใบแจ้งหนี้ไม่สำเร็จ",
+    "retry": "ลองใหม่",
     "close": "ปิด",
     "pay": {
       "action": "ชำระเงิน",

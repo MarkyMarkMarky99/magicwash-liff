@@ -2,13 +2,13 @@ import { useState, useEffect, useContext, useRef, useCallback, useId } from 'rea
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
+import { getInvoiceByNumber } from '../api/gvizApi';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
 import PageActionFooter from '../components/ui/PageActionFooter';
 import SectionCard, { BADGE_PILL } from '../components/ui/SectionCard';
 import qrPaymentImage from '../assets/IMG_8640.webp';
-import { mockInvoiceViewRows } from '../mocks/invoiceView';
 
 const STATUS_STYLES = {
   DRAFT:          { badge: 'bg-gray-100 text-gray-600',                icon: 'draft' },
@@ -98,16 +98,6 @@ function formatDateTime(raw, locale) {
   return d.toLocaleString(locale, {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
-}
-
-/**
- * Validates the invoice number coming from the URL against the known rows.
- * Falls back to the first invoice so the page always has something to render.
- */
-function resolveInvoiceNumber(raw, rows) {
-  const wanted = toText(raw);
-  const match = wanted && rows.find((r) => r?.invoiceNumber === wanted);
-  return match ? match.invoiceNumber : rows[0]?.invoiceNumber ?? null;
 }
 
 /** Normalises one raw sheet row into the shape the UI renders. */
@@ -353,38 +343,93 @@ function TotalRow({ label, value, tone = 'default' }) {
   );
 }
 
-export default function InvoicePreview({ invoiceNumber }) {
-  const rows = mockInvoiceViewRows.filter((r) => toText(r?.invoiceNumber));
+const NOOP = () => {};
+
+export default function InvoicePreview({ invoiceNumber, onBack = NOOP }) {
   const { t, i18n } = useTranslation();
   const setOnBack = useContext(HeaderContext);
-  const [selected, setSelected] = useState(() => resolveInvoiceNumber(invoiceNumber, rows));
+  const requestedInvoiceNumber = toText(invoiceNumber);
+  const [row, setRow] = useState(null);
+  const [status, setStatus] = useState(requestedInvoiceNumber ? 'loading' : 'notFound');
+  const [retryCount, setRetryCount] = useState(0);
   const [proofUrl, setProofUrl] = useState(null); // open slip lightbox, or null
   const [payOpen, setPayOpen] = useState(false);  // QR payment popup
 
   useEffect(() => {
-    setOnBack?.(null);
-  }, [setOnBack]);
+    if (!setOnBack) return undefined;
+    setOnBack(() => onBack);
+    return () => setOnBack(null);
+  }, [onBack, setOnBack]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!requestedInvoiceNumber) {
+      return () => { active = false; };
+    }
+
+    getInvoiceByNumber(
+      requestedInvoiceNumber,
+      (fresh) => {
+        if (active) setRow(fresh);
+      },
+    )
+      .then((fresh) => {
+        if (!active) return;
+        setRow(fresh);
+        setStatus(fresh ? 'done' : 'notFound');
+      })
+      .catch(() => {
+        if (!active) return;
+        setRow(null);
+        setStatus('error');
+      });
+
+    return () => { active = false; };
+  }, [requestedInvoiceNumber, retryCount]);
 
   const closeProof = useCallback(() => setProofUrl(null), []);
   const closePay = useCallback(() => setPayOpen(false), []);
-
-  // Keep the URL shareable when the customer switches invoices.
-  const handleSelect = (num) => {
-    setSelected(num);
+  const handleRetry = useCallback(() => {
+    setRow(null);
     setProofUrl(null);
     setPayOpen(false);
-    const params = new URLSearchParams(window.location.search);
-    params.set('invoiceNumber', num);
-    window.history.replaceState(null, '', `${window.location.pathname}?${params}`);
-  };
+    setStatus('loading');
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const dateLocale = getDateLocale(i18n.language);
-  const invoice = readInvoice(rows.find((r) => r?.invoiceNumber === selected));
+  const invoice = readInvoice(row);
 
-  if (!invoice) {
+  if (status === 'loading') {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3">
-        <span className="material-symbols-outlined text-error text-5xl">receipt_long</span>
+      <div className="flex-1 flex flex-col items-center justify-center gap-3" role="status">
+        <span className="material-symbols-outlined text-primary text-5xl animate-pulse" aria-hidden="true">local_laundry_service</span>
+        <p className="font-body text-on-surface-variant text-sm">{t('loading')}</p>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center" role="alert">
+        <span className="material-symbols-outlined text-error text-5xl" aria-hidden="true">error_outline</span>
+        <p className="font-body text-on-surface-variant text-sm">{t('invoice.loadError')}</p>
+        <button
+          type="button"
+          onClick={handleRetry}
+          className="rounded-xl bg-primary px-4 py-2 font-label text-[12px] font-semibold text-on-primary transition-all hover:bg-primary/90 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        >
+          {t('invoice.retry')}
+        </button>
+      </div>
+    );
+  }
+
+  if (status === 'notFound' || !invoice) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3" role="status">
+        <span className="material-symbols-outlined text-error text-5xl" aria-hidden="true">receipt_long</span>
         <p className="font-body text-on-surface-variant text-sm">{t('invoice.notFound')}</p>
       </div>
     );
@@ -436,33 +481,6 @@ export default function InvoicePreview({ invoiceNumber }) {
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden font-body text-on-surface">
       <main className="flex-1 overflow-y-auto no-scrollbar">
         <div className="px-4 pt-4 pb-8 space-y-5">
-
-          {/* Invoice picker */}
-          <div>
-            <p className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wide mb-1.5">
-              {t('invoice.selectLabel')}
-            </p>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-              {rows.map((row) => {
-                const num = row.invoiceNumber;
-                const active = num === selected;
-                return (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => handleSelect(num)}
-                    aria-pressed={active}
-                    className={`shrink-0 px-3 h-8 rounded-full font-headline text-[11px] font-bold transition-all active:scale-95 focus:outline-none ${active
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                      }`}
-                  >
-                    {num.replace(/^INV-/, '')}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
           {/* Invoice number on the left, dates on the right.
               Status now lives only in the payment footer — see below. */}
@@ -545,13 +563,13 @@ export default function InvoicePreview({ invoiceNumber }) {
 
           {/* Totals — shown exactly as stored on the invoice row.
               The payment count is the only interactive part of the header; it drops
-              down the payment list. Remounting on `selected` keeps it closed per invoice. */}
+              down the payment list. Remounting on the invoice number keeps it closed per invoice. */}
           <SectionCard
             icon="calculate"
             title={t('invoice.totals.title')}
             action={hasPayments ? (
               <PaymentsMenu
-                key={selected}
+                key={invoice.invoiceNumber}
                 payments={invoice.payments}
                 currency={currency}
                 dateLocale={dateLocale}

@@ -9,6 +9,7 @@ import { columns as ordersViewColumns,    dateColumns as ordersViewDates,    hea
 import { columns as ordersColumns,        dateColumns as ordersDates,        headers as ordersHeaders,        schema as ordersSchema        } from './schemas/orders.js';
 import { columns as orderItemsColumns,    dateColumns as orderItemsDates,    headers as orderItemsHeaders,    schema as orderItemsSchema    } from './schemas/orderItems.js';
 import { columns as appointmentsColumns,  dateColumns as appointmentsDates,  headers as appointmentsHeaders,  schema as appointmentsSchema  } from './schemas/appointments.js';
+import { columns as invoiceViewColumns,    dateColumns as invoiceViewDates,    headers as invoiceViewHeaders,    schema as invoiceViewSchema    } from './schemas/invoiceView.js';
 
 export const SOURCE_MAP = {
   orderForm:      { sheetName: 'OrderForm',      spreadsheetId: process.env.GVIZ_SPREADSHEET_ID,          columns: orderFormColumns,      dateColumns: orderFormDates,      headers: orderFormHeaders,      required: orderFormSchema.required      },
@@ -20,6 +21,7 @@ export const SOURCE_MAP = {
   orders:         { sheetName: 'Orders',         spreadsheetId: process.env.GVIZ_ORDERS_SPREADSHEET_ID,   columns: ordersColumns,         dateColumns: ordersDates,         headers: ordersHeaders,         required: ordersSchema.required         },
   orderItems:     { sheetName: 'OrderItems',     spreadsheetId: process.env.GVIZ_ORDERS_SPREADSHEET_ID,   columns: orderItemsColumns,     dateColumns: orderItemsDates,     headers: orderItemsHeaders,     required: orderItemsSchema.required     },
   appointments:   { sheetName: 'Appointments',   spreadsheetId: process.env.GVIZ_APPOINTMENTS_SPREADSHEET_ID, columns: appointmentsColumns, dateColumns: appointmentsDates, headers: appointmentsHeaders, required: appointmentsSchema.required   },
+  invoiceView:    { sheetName: 'InvoicesView',   spreadsheetId: process.env.GVIZ_PORTAL_SPREADSHEET_ID,       columns: invoiceViewColumns, dateColumns: invoiceViewDates, headers: invoiceViewHeaders, required: invoiceViewSchema.required },
 };
 
 export function gvizDateToISO(v) {

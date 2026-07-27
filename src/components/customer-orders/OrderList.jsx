@@ -3,7 +3,7 @@ import SectionCard from '../ui/SectionCard';
 import OrderCard from './OrderCard';
 import WaitingPickupCard from './WaitingPickupCard';
 
-export default function OrderList({ orders, waitingPickups = [], onViewPhotos, onSelectOrder, onRefresh, refreshing = false }) {
+export default function OrderList({ orders, waitingPickups = [], onViewPhotos, onSelectOrder, onViewInvoice, onRefresh, refreshing = false }) {
   const { t } = useTranslation();
   const isEmpty = orders.length === 0 && waitingPickups.length === 0;
 
@@ -18,7 +18,7 @@ export default function OrderList({ orders, waitingPickups = [], onViewPhotos, o
           onClick={(e) => { e.stopPropagation(); onRefresh?.(); }}
           disabled={refreshing}
           aria-label={t('customerOrders.refresh')}
-          className="h-[22px] w-[22px] flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition-all disabled:opacity-50"
+          className="h-[22px] w-[22px] flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition-all disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         >
           <span
             className={`material-symbols-outlined text-primary text-[16px] ${refreshing ? 'animate-spin' : ''}`}
@@ -37,7 +37,13 @@ export default function OrderList({ orders, waitingPickups = [], onViewPhotos, o
             <WaitingPickupCard key={appt.appointmentId} appointment={appt} />
           ))}
           {orders.map((order) => (
-            <OrderCard key={order.orderId} order={order} onViewPhotos={onViewPhotos} onSelectOrder={onSelectOrder} />
+            <OrderCard
+              key={order.orderId}
+              order={order}
+              onViewPhotos={onViewPhotos}
+              onSelectOrder={onSelectOrder}
+              onViewInvoice={onViewInvoice}
+            />
           ))}
         </div>
       )}

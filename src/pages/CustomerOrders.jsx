@@ -11,6 +11,7 @@ import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
 import PageActionFooter from '../components/ui/PageActionFooter';
 import OrderGallery from './OrderGallery';
 import BookPickup from './BookPickup';
+import InvoicePreview from './InvoicePreview';
 
 export default function CustomerOrders({ custId }) {
   const [customer, setCustomer]               = useState(null);
@@ -19,6 +20,7 @@ export default function CustomerOrders({ custId }) {
   const [refreshing, setRefreshing]           = useState(false);
   const [galleryOrderId, setGalleryOrderId]   = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [invoicePreview, setInvoicePreview]   = useState(null); // { invoiceNumber, origin, orderId? }
   const [booking, setBooking]                 = useState(null); // { type: 'pickup'|'delivery', orderId: string|null }
   const [bookingBusy, setBookingBusy]         = useState(false); // true while a booking POST is in flight
   const [waitingPickups, setWaitingPickups]   = useState([]);    // upcoming active pickups (from Appointments)
@@ -53,6 +55,7 @@ export default function CustomerOrders({ custId }) {
   }, [custId, loadWaitingPickups]);
 
   useEffect(() => {
+    if (invoicePreview) return;
     if (bookingBusy) {
       // Lock navigation while a booking write is in flight (prevents back → reopen → resubmit).
       setOnBack(null);
@@ -63,12 +66,12 @@ export default function CustomerOrders({ custId }) {
     } else {
       setOnBack(null);
     }
-  }, [galleryOrderId, booking, bookingBusy]);
+  }, [galleryOrderId, booking, bookingBusy, invoicePreview, setOnBack]);
 
   const handleRefresh = useCallback(async () => {
     if (!custId || refreshing) return;
     lsClear(cacheKey('customer', custId));
-    lsClear(cacheKey('ordersViewV2', custId));
+    lsClear(cacheKey('ordersViewV3', custId));
     clearAppointmentsCache(custId);
     setRefreshing(true);
     try {
@@ -88,6 +91,23 @@ export default function CustomerOrders({ custId }) {
     setSelectedOrderId(orderId);
   };
 
+  const handleShowInvoiceFromList = useCallback((invoiceNumber) => {
+    setInvoicePreview({ invoiceNumber, origin: 'list' });
+  }, []);
+
+  const handleShowInvoiceFromDetail = useCallback((invoiceNumber, orderId) => {
+    if (!orderId) return;
+    setSelectedOrderId(null);
+    setInvoicePreview({ invoiceNumber, origin: 'detail', orderId });
+  }, []);
+
+  const handleInvoiceBack = useCallback(() => {
+    if (invoicePreview?.origin === 'detail') {
+      setSelectedOrderId(invoicePreview.orderId);
+    }
+    setInvoicePreview(null);
+  }, [invoicePreview]);
+
   const handleViewPhotosFromSheet = (orderId) => {
     setSelectedOrderId(null);
     setGalleryOrderId(orderId);
@@ -106,15 +126,23 @@ export default function CustomerOrders({ custId }) {
   return (
     <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden font-body text-on-surface w-full">
 
+      {invoicePreview && (
+        <InvoicePreview
+          key={invoicePreview.invoiceNumber}
+          invoiceNumber={invoicePreview.invoiceNumber}
+          onBack={handleInvoiceBack}
+        />
+      )}
+
       {/* Gallery view — embedded, no own header */}
-      {galleryOrderId && (
+      {!invoicePreview && galleryOrderId && (
         <div className="flex-1 overflow-y-auto no-scrollbar">
           <OrderGallery orderId={galleryOrderId} onBack={() => setGalleryOrderId(null)} />
         </div>
       )}
 
       {/* Book pickup / delivery view — embedded, no own header */}
-      {booking && !galleryOrderId && (
+      {!invoicePreview && booking && !galleryOrderId && (
         <BookPickup
           userData={customer}
           type={booking.type}
@@ -125,7 +153,7 @@ export default function CustomerOrders({ custId }) {
       )}
 
       {/* Orders list view */}
-      {!galleryOrderId && !booking && (
+      {!invoicePreview && !galleryOrderId && !booking && (
         <>
           <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
 
@@ -161,6 +189,7 @@ export default function CustomerOrders({ custId }) {
                     waitingPickups={waitingPickups}
                     onViewPhotos={setGalleryOrderId}
                     onSelectOrder={handleSelectOrder}
+                    onViewInvoice={handleShowInvoiceFromList}
                     onRefresh={handleRefresh}
                     refreshing={refreshing}
                   />
@@ -179,11 +208,12 @@ export default function CustomerOrders({ custId }) {
       )}
 
       {/* Order detail bottom sheet */}
-      {selectedOrderId && !galleryOrderId && (
+      {!invoicePreview && selectedOrderId && !galleryOrderId && (
         <OrderDetailSheet
           orderId={selectedOrderId}
           onClose={() => setSelectedOrderId(null)}
           onViewPhotos={handleViewPhotosFromSheet}
+          onViewInvoice={handleShowInvoiceFromDetail}
           onScheduleDelivery={handleShowDelivery}
         />
       )}

@@ -15,7 +15,7 @@ const STATUS_CONFIG = {
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
 
-export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
+export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewInvoice }) {
   const { t, i18n } = useTranslation();
   const dateLocale = getDateLocale(i18n.language);
   const hasInvoice = Boolean(order.invoiceNumber);
@@ -62,23 +62,22 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder }) {
             onClick={(event) => event.stopPropagation()}
           >
             {hasInvoice && (
-              <a
-                href={`https://magicwash-laundry.com/order?ord=${encodeURIComponent(order.orderId)}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => onViewInvoice?.(order.invoiceNumber)}
                 aria-label={t('customerOrders.viewInvoice')}
-                className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+                className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded"
               >
-                <span className="material-symbols-outlined text-[14px]">receipt_long</span>
-              </a>
+                <span className="material-symbols-outlined text-[14px]" aria-hidden="true">receipt_long</span>
+              </button>
             )}
             <button
               type="button"
               onClick={() => onViewPhotos?.(order.orderId)}
               aria-label={t('customerOrders.viewPhotos')}
-              className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none"
+              className="text-primary hover:opacity-70 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded"
             >
-              <span className="material-symbols-outlined text-[14px]">photo_library</span>
+              <span className="material-symbols-outlined text-[14px]" aria-hidden="true">photo_library</span>
             </button>
           </div>
         </div>

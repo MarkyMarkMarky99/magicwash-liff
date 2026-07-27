@@ -9,6 +9,7 @@ export const columns = [
   'billingPeriodEnd',
   'issuedDate',
   'dueDate',
+  'customerId',
   'customerJson',
   'itemsJson',
   'adjustmentsJson',
@@ -18,6 +19,26 @@ export const columns = [
   'grandTotal',
   'paidAmount',
   'balanceDue',
+];
+
+export const headers = [
+  'invoice_number',
+  'status',
+  'billing_type',
+  'billing_period_start',
+  'billing_period_end',
+  'issued_date',
+  'due_date',
+  'customer_id',
+  'customer_json',
+  'items_json',
+  'adjustments_json',
+  'payments_json',
+  'subtotal',
+  'adjustment_total',
+  'grand_total',
+  'paid_amount',
+  'balance_due',
 ];
 
 export const dateColumns = new Set([
@@ -66,6 +87,10 @@ export const schema = {
     dueDate: {
       type: 'string',
       format: 'date',
+    },
+    customerId: {
+      type: 'string',
+      description: 'Customer identifier for this invoice — same value as customer.customerCode inside customerJson (customerCode is the actual customer id, not a separate display code). Promoted to a top-level column so invoices can be queried by customer (e.g. filterField=customerId), since GViz cannot filter on a value nested inside a JSON string cell.',
     },
     customerJson: {
       type: 'string',

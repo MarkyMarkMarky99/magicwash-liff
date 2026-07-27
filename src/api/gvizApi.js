@@ -1,5 +1,7 @@
 import { gvizSwrFetch } from './localCache';
 
+const INVOICE_VIEW_COLS = 'invoiceNumber,status,billingType,billingPeriodStart,billingPeriodEnd,issuedDate,dueDate,customerId,customerJson,itemsJson,adjustmentsJson,paymentsJson,subtotal,adjustmentTotal,grandTotal,paidAmount,balanceDue';
+
 function toDirectUrl(url) {
   if (!url) return null;
   try {
@@ -26,4 +28,25 @@ export async function getPhotosByOrderId(orderId, onRevalidate) {
     'imageUrl,notes',
   );
   return rows.filter((r) => r.imageUrl);
+}
+
+function normalizeInvoiceNumber(invoiceNumber) {
+  if (typeof invoiceNumber !== 'string' || !invoiceNumber.trim()) {
+    throw new Error('[gvizApi] Invalid invoice number');
+  }
+  return invoiceNumber.trim();
+}
+
+export async function getInvoiceByNumber(invoiceNumber, onRevalidate) {
+  const normalizedInvoiceNumber = normalizeInvoiceNumber(invoiceNumber);
+  const rows = await gvizSwrFetch(
+    'invoiceView',
+    { filterField: 'invoiceNumber', filterValue: normalizedInvoiceNumber, limit: 1 },
+    normalizedInvoiceNumber,
+    undefined,
+    onRevalidate ? (freshRows) => onRevalidate(freshRows[0] ?? null) : null,
+    INVOICE_VIEW_COLS,
+    'invoiceView',
+  );
+  return rows[0] ?? null;
 }
