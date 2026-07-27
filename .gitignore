@@ -25,5 +25,12 @@ dist-ssr
 
 .vercel
 
+# Local customer data used only for invoice preview testing
+/src/mocks/invoice-view-*.json
+
 # Claude Code local config
 .claude/
+.codex/
+
+# Local UI prototypes, not part of the app build
+/src/prototypes/

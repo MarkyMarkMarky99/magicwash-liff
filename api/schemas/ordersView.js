@@ -2,9 +2,15 @@
 // Spreadsheet: 1ucqeUqRN25L4YF1GEnjP02ex_IohR1f8h8IwaP_EBRQ (MagicwashPortal)
 
 export const columns = [
-  'orderId', 'customerId', 'orderNumber', 'receivedDate', 'dueDate',
+  'orderId', 'customerId', 'orderNumber', 'invoiceNumber', 'receivedDate', 'dueDate',
   'serviceType', 'status', 'quantity', 'note', 'itemsJson',
   'syncedAt', 'createdAt',
+];
+
+export const headers = [
+  'order_id', 'customer_id', 'order_number', 'invoice_number', 'received_date', 'due_date',
+  'service_type', 'status', 'quantity', 'note', 'items_json',
+  'synced_at', 'created_at',
 ];
 
 export const dateColumns = new Set(['receivedDate', 'dueDate', 'syncedAt', 'createdAt']);
@@ -18,6 +24,7 @@ export const schema = {
     orderId:     { type: 'string' },
     customerId:  { type: 'string' },
     orderNumber: { type: ['string', 'null'] },
+    invoiceNumber: { type: ['string', 'null'] },
     receivedDate:{ type: ['string', 'null'], format: 'date' },
     dueDate:     { type: ['string', 'null'], format: 'date' },
     serviceType: { type: ['string', 'null'], enum: ['ซักรีด', 'ซักแห้ง', null] },

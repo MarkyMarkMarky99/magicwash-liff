@@ -1,11 +1,14 @@
-import { gvizSwrFetch, cacheKey, lsSet, gvizStr } from './localCache';
+import { gvizSwrFetch, cacheKey, lsSet } from './localCache';
 
-const ORDERS_VIEW_COLS = 'orderId,customerId,orderNumber,receivedDate,dueDate,serviceType,status,quantity,note,itemsJson';
+const ORDERS_VIEW_COLS = 'orderId,customerId,orderNumber,invoiceNumber,receivedDate,dueDate,serviceType,status,quantity,note,itemsJson';
 
 function transformOrder(row) {
   let items = [];
   try { items = JSON.parse(row.itemsJson ?? '[]'); } catch { items = []; }
-  return { ...row, items };
+  const invoiceNumber = typeof row.invoiceNumber === 'string'
+    ? row.invoiceNumber.trim() || null
+    : null;
+  return { ...row, invoiceNumber, items };
 }
 
 function preWarm(orders) {
@@ -20,11 +23,12 @@ function preWarm(orders) {
 export async function getOrdersByCustomerId(customerId, onRevalidate) {
   const rows = await gvizSwrFetch(
     'ordersView',
-    `SELECT * WHERE B='${gvizStr(customerId)}' ORDER BY D DESC`,
+    { filterField: 'customerId', filterValue: customerId, sortField: 'receivedDate', sortDir: 'desc' },
     customerId,
     transformOrder,
     onRevalidate ? (rows) => onRevalidate(preWarm(rows)) : null,
     ORDERS_VIEW_COLS,
+    'ordersView',
   );
   return preWarm(rows);
 }
@@ -36,11 +40,12 @@ export async function getOrdersByCustomerId(customerId, onRevalidate) {
 export async function getOrderById(orderId, onRevalidate) {
   const rows = await gvizSwrFetch(
     'ordersView',
-    `SELECT * WHERE A='${gvizStr(orderId)}' LIMIT 1`,
+    { filterField: 'orderId', filterValue: orderId, limit: 1 },
     orderId,
     transformOrder,
     onRevalidate ? (rows) => onRevalidate(rows[0] ?? null) : null,
     ORDERS_VIEW_COLS,
+    'ordersView',
   );
   return rows[0] ?? null;
 }

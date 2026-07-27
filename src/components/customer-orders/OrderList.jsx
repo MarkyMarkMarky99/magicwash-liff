@@ -1,60 +1,53 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import SectionCard from '../ui/SectionCard';
 import OrderCard from './OrderCard';
 import WaitingPickupCard from './WaitingPickupCard';
 
-export default function OrderList({ orders, waitingPickups = [], onViewPhotos, onSelectOrder, onRefresh, refreshing = false }) {
+export default function OrderList({ orders, waitingPickups = [], onViewPhotos, onSelectOrder, onViewInvoice, onRefresh, refreshing = false }) {
   const { t } = useTranslation();
-  const [collapsed, setCollapsed] = useState(false);
   const isEmpty = orders.length === 0 && waitingPickups.length === 0;
 
   return (
-    <section className="bg-white w-full">
-
-      {/* Section heading — CardContainer style */}
-      <div
-        className="px-4 py-2 bg-surface-container-low text-primary flex items-center justify-between cursor-pointer select-none"
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-primary text-[16px]">receipt_long</span>
-          <h2 className="font-headline font-bold text-[13px] tracking-tight">{t('customerOrders.orderHistory')}</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 h-[22px]">
-            <span className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
-              {t('customerOrders.ordersCount', { count: orders.length })}
-            </span>
-          </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); onRefresh?.(); }}
-            disabled={refreshing}
-            className="h-[22px] w-[22px] flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition-all disabled:opacity-50"
+    <SectionCard
+      icon="receipt_long"
+      title={t('customerOrders.orderHistory')}
+      badge={t('customerOrders.ordersCount', { count: orders.length })}
+      collapsible
+      action={
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRefresh?.(); }}
+          disabled={refreshing}
+          aria-label={t('customerOrders.refresh')}
+          className="h-[22px] w-[22px] flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition-all disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        >
+          <span
+            className={`material-symbols-outlined text-primary text-[16px] ${refreshing ? 'animate-spin' : ''}`}
+            aria-hidden="true"
           >
-            <span className={`material-symbols-outlined text-primary text-[16px] ${refreshing ? 'animate-spin' : ''}`}>
-              refresh
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Empty */}
-      {!collapsed && isEmpty && (
+            refresh
+          </span>
+        </button>
+      }
+    >
+      {isEmpty ? (
         <p className="px-6 py-4 text-sm text-on-surface-variant italic">{t('customerOrders.empty')}</p>
-      )}
-
-      {/* Cards — upcoming pickups first (from Appointments), then order history */}
-      {!collapsed && !isEmpty && (
+      ) : (
         <div className="divide-y divide-outline-variant/10">
           {waitingPickups.map((appt) => (
             <WaitingPickupCard key={appt.appointmentId} appointment={appt} />
           ))}
           {orders.map((order) => (
-            <OrderCard key={order.orderId} order={order} onViewPhotos={onViewPhotos} onSelectOrder={onSelectOrder} />
+            <OrderCard
+              key={order.orderId}
+              order={order}
+              onViewPhotos={onViewPhotos}
+              onSelectOrder={onSelectOrder}
+              onViewInvoice={onViewInvoice}
+            />
           ))}
         </div>
       )}
-
-    </section>
+    </SectionCard>
   );
 }

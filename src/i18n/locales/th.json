@@ -1,5 +1,8 @@
 {
   "loading": "กำลังโหลด…",
+  "navigation": {
+    "back": "ย้อนกลับ"
+  },
   "register": {
     "pageTitle": "ลูกค้าใหม่",
     "heading": "สร้างบัญชี",
@@ -73,11 +76,82 @@
     "schedulePickup": "นัดรับผ้า",
     "orderDetails": "รายละเอียดออเดอร์",
     "viewPhotos": "ดูรูปภาพทั้งหมด",
+    "viewInvoice": "ดูใบแจ้งหนี้",
     "loadError": "โหลดข้อมูลไม่สำเร็จ",
     "items": "รายการ",
     "orderHistory": "ประวัติออเดอร์",
     "ordersCount": "{{count}} ออเดอร์",
+    "refresh": "รีเฟรชออเดอร์",
     "empty": "ยังไม่มีออเดอร์"
+  },
+  "invoice": {
+    "pageTitle": "ใบแจ้งหนี้",
+    "invoiceNumber": "เลขที่ใบแจ้งหนี้",
+    "selectLabel": "เลือกใบแจ้งหนี้",
+    "issuedDate": "วันที่ออก",
+    "dueDate": "ครบกำหนด",
+    "billedTo": "ออกให้แก่",
+    "customerNo": "หมายเลขลูกค้า",
+    "notFound": "ไม่พบใบแจ้งหนี้",
+    "loadError": "โหลดใบแจ้งหนี้ไม่สำเร็จ",
+    "retry": "ลองใหม่",
+    "close": "ปิด",
+    "pay": {
+      "action": "ชำระเงิน",
+      "title": "สแกนเพื่อชำระเงิน",
+      "paidLabel": "ชำระครบแล้ว",
+      "pendingLabel": "รอยืนยันการชำระเงิน",
+      "pendingNotice": "เรากำลังตรวจสอบการชำระเงินของคุณ ไม่ต้องชำระซ้ำ"
+    },
+    "status": {
+      "DRAFT": "ฉบับร่าง",
+      "UNPAID": "ยังไม่ชำระ",
+      "OVERDUE": "เกินกำหนด",
+      "PARTIALLY_PAID": "ชำระบางส่วน",
+      "PAID": "ชำระแล้ว",
+      "CANCELLED": "ยกเลิก",
+      "VOID": "เป็นโมฆะ"
+    },
+    "sourceOrders": {
+      "title": "ออเดอร์ที่เกี่ยวข้อง",
+      "count": "ออเดอร์",
+      "empty": "ไม่มีออเดอร์ที่เชื่อมโยง"
+    },
+    "items": {
+      "title": "รายการค่าบริการ",
+      "count": "รายการ",
+      "netTotal": "ยอดสุทธิรายการ",
+      "empty": "ไม่มีรายการค่าบริการ"
+    },
+    "totals": {
+      "title": "สรุปยอด",
+      "subtotal": "ยอดรวม",
+      "adjustments": "รายการปรับปรุง",
+      "grandTotal": "ยอดสุทธิ",
+      "paid": "ยอดที่ชำระแล้ว",
+      "totalDue": "ยอดที่ต้องชำระ"
+    },
+    "payments": {
+      "title": "ประวัติการชำระเงิน",
+      "count": "รายการ",
+      "reference": "อ้างอิง",
+      "viewProof": "ดูสลิปการชำระเงิน",
+      "empty": "ยังไม่มีการชำระเงิน"
+    },
+    "paymentStatus": {
+      "PENDING": "รอตรวจสอบ",
+      "VERIFIED": "ยืนยันแล้ว",
+      "FAILED": "ไม่สำเร็จ",
+      "CANCELLED": "ยกเลิก"
+    },
+    "method": {
+      "CASH": "เงินสด",
+      "BANK_TRANSFER": "โอนผ่านธนาคาร",
+      "CREDIT_CARD": "บัตรเครดิต",
+      "QR_PROMPTPAY": "พร้อมเพย์ QR",
+      "GIFT_VOUCHER": "บัตรกำนัล",
+      "OTHER": "อื่น ๆ"
+    }
   },
   "activeOrder": {
     "pageTitle": "ออเดอร์ปัจจุบัน",

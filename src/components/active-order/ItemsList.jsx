@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import SectionCard from '../ui/SectionCard';
 
 function formatBaht(n) {
   if (n == null) return '—';
@@ -8,42 +8,19 @@ function formatBaht(n) {
 
 export default function ItemsList({ items = [] }) {
   const { t } = useTranslation();
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <section className="bg-white w-full rounded-2xl overflow-hidden">
-      {/* Section heading — matches OrderList style */}
-      <div
-        className="px-4 py-2 bg-surface-container-low text-primary flex items-center justify-between cursor-pointer select-none"
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-primary text-[16px]">checkroom</span>
-          <h2 className="font-headline font-bold text-[13px] tracking-tight">
-            {t('activeOrder.items.title')}
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-surface-container rounded-full px-2.5 h-[22px]">
-            <span className="font-label text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
-              {items.length} {t('activeOrder.items.count')}
-            </span>
-          </div>
-          <span className={`material-symbols-outlined text-primary text-[16px] transition-transform ${collapsed ? '' : 'rotate-180'}`}>
-            expand_more
-          </span>
-        </div>
-      </div>
-
-      {/* Empty */}
-      {!collapsed && items.length === 0 && (
+    <SectionCard
+      icon="checkroom"
+      title={t('activeOrder.items.title')}
+      badge={`${items.length} ${t('activeOrder.items.count')}`}
+      collapsible
+    >
+      {items.length === 0 ? (
         <p className="px-6 py-4 text-sm text-on-surface-variant italic">
           {t('activeOrder.items.empty')}
         </p>
-      )}
-
-      {/* Rows */}
-      {!collapsed && items.length > 0 && (
+      ) : (
         <ul className="divide-y divide-outline-variant/10">
           {items.map((item) => {
             const lineTotal = (item.price ?? 0) * (item.quantity ?? 0);
@@ -65,6 +42,6 @@ export default function ItemsList({ items = [] }) {
           })}
         </ul>
       )}
-    </section>
+    </SectionCard>
   );
 }

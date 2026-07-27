@@ -6,6 +6,11 @@ export const columns = [
   'quantity', 'unit', 'addOns', 'pricing', 'notes',
 ];
 
+export const headers = [
+  'order_id', 'item_id', 'sku', 'service_type', 'description',
+  'quantity', 'unit', 'add_ons', 'pricing', 'notes',
+];
+
 export const dateColumns = new Set();
 
 export const schema = {
