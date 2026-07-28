@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getStorage } from 'firebase-admin/storage';
+import { getFirebaseStorageBucket } from './firebaseAdmin.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -25,12 +24,6 @@ const EXT_BY_CONTENT_TYPE = Object.freeze({
   'image/png': '.png',
   'image/webp': '.webp',
 });
-
-const REQUIRED_SERVICE_ACCOUNT_FIELDS = Object.freeze([
-  'project_id',
-  'client_email',
-  'private_key',
-]);
 
 /** @type {Readonly<Record<'BAD_INPUT'|'UNSUPPORTED_TYPE'|'TOO_LARGE'|'UPLOAD_FAILED', string>>} */
 const MESSAGES = Object.freeze({
@@ -59,57 +52,6 @@ function okResult(url, path) {
  */
 function fail(code) {
   return { ok: false, code, message: MESSAGES[code] };
-}
-
-// ---------------------------------------------------------------------------
-// Firebase init (private) — mirror of docs/reference/firebaseAdmin.js
-// ---------------------------------------------------------------------------
-
-function readFirebaseServiceAccount() {
-  const encoded = process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64;
-  if (!encoded) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 is not configured.');
-  }
-
-  let serviceAccount;
-  try {
-    const json = Buffer.from(encoded, 'base64').toString('utf8');
-    serviceAccount = JSON.parse(json);
-  } catch {
-    throw new Error(
-      'FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 must contain Base64-encoded JSON.',
-    );
-  }
-
-  const missingFields = REQUIRED_SERVICE_ACCOUNT_FIELDS.filter(
-    (field) => typeof serviceAccount?.[field] !== 'string' || !serviceAccount[field],
-  );
-  if (missingFields.length) {
-    throw new Error(
-      `Firebase Service Account is missing required field(s): ${missingFields.join(', ')}.`,
-    );
-  }
-
-  return serviceAccount;
-}
-
-function getFirebaseApp() {
-  const [existingApp] = getApps();
-  if (existingApp) return existingApp;
-
-  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
-  if (!storageBucket) {
-    throw new Error('FIREBASE_STORAGE_BUCKET is not configured.');
-  }
-
-  return initializeApp({
-    credential: cert(readFirebaseServiceAccount()),
-    storageBucket,
-  });
-}
-
-function getDefaultBucket() {
-  return getStorage(getFirebaseApp()).bucket();
 }
 
 // ---------------------------------------------------------------------------
@@ -380,7 +322,7 @@ export async function uploadSlip(input, options) {
     const token = randomUUID();
 
     // 11. Bucket
-    const bucket = options.bucket ?? getDefaultBucket();
+    const bucket = options.bucket ?? getFirebaseStorageBucket();
 
     // 12. Resolve bucketName
     let bucketName = null;
