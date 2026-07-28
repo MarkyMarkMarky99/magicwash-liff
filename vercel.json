@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/verify-slip.js": {
+      "maxDuration": 30
+    }
+  }
+}
