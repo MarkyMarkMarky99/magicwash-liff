@@ -163,6 +163,17 @@
     "slip": {
       "verified": "Payment confirmed. Thank you!",
       "pending": "Slip received. Our staff will check it and confirm shortly.",
+      "attach": "Attach payment slip",
+      "previewAlt": "Selected payment slip",
+      "replace": "Choose a different photo",
+      "cancel": "Cancel",
+      "send": "Send slip",
+      "sending": "Sending your slip… this can take up to 30 seconds",
+      "resultTitle": {
+        "verified": "Payment confirmed",
+        "pending": "Slip received",
+        "failed": "Couldn't complete"
+      },
       "error": {
         "badRequest": "We couldn't read that file. Please attach the slip again.",
         "methodNotAllowed": "Something went wrong. Please try again.",

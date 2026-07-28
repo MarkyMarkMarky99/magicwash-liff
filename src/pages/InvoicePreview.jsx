@@ -8,6 +8,8 @@ import DateChip from '../components/ui/DateChip';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
 import PageActionFooter from '../components/ui/PageActionFooter';
 import SectionCard, { BADGE_PILL } from '../components/ui/SectionCard';
+import SlipUpload from '../components/invoice/SlipUpload';
+import { preprocessSlipImage, submitSlip } from '../services/slipUpload';
 import qrPaymentImage from '../assets/IMG_8640.webp';
 
 const STATUS_STYLES = {
@@ -355,6 +357,13 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   const [proofUrl, setProofUrl] = useState(null); // open slip lightbox, or null
   const [payOpen, setPayOpen] = useState(false);  // QR payment popup
 
+  // "Attach a payment slip" orchestration — lives here, not in the view
+  // component. stage drives what SlipUpload renders inside the QR popup.
+  const [slipStage, setSlipStage] = useState('idle'); // idle | preview | sending | result
+  const [slipPreviewUrl, setSlipPreviewUrl] = useState(null);
+  const [slipPayload, setSlipPayload] = useState(null); // { base64, filename, contentType }, ready to submit
+  const [slipResult, setSlipResult] = useState(null);   // normalized SlipOutcome from submitSlip()
+
   useEffect(() => {
     if (!setOnBack) return undefined;
     setOnBack(() => onBack);
@@ -393,10 +402,38 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   }, [mockRow, requestedInvoiceNumber, retryCount]);
 
   const closeProof = useCallback(() => setProofUrl(null), []);
-  const closePay = useCallback(() => setPayOpen(false), []);
+
+  const resetSlip = useCallback(() => {
+    setSlipStage('idle');
+    setSlipPreviewUrl(null);
+    setSlipPayload(null);
+    setSlipResult(null);
+  }, []);
+
+  // Gates every dismiss path the QR popup has (backdrop click, Escape, the
+  // X button — Lightbox routes all three through this one onClose prop).
+  // There's no server-side idempotency for a slip submission: closing the
+  // popup mid-flight wouldn't cancel the request, it would just orphan the
+  // UI and invite the customer to reopen and resubmit, creating a second
+  // payment row an admin has to clean up by hand.
+  const closePay = useCallback(() => {
+    if (slipStage === 'sending') return;
+    setPayOpen(false);
+    resetSlip();
+  }, [slipStage, resetSlip]);
+
+  const handleSlipPick = useCallback(async (file) => {
+    const processed = await preprocessSlipImage(file);
+    setSlipPayload(processed);
+    setSlipPreviewUrl(`data:${processed.contentType};base64,${processed.base64}`);
+    setSlipResult(null);
+    setSlipStage('preview');
+  }, []);
+
   const handleRetry = useCallback(() => {
     setProofUrl(null);
     setPayOpen(false);
+    resetSlip();
     if (mockRow) {
       setRow(mockRow);
       setStatus('done');
@@ -405,7 +442,7 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
     setRow(null);
     setStatus('loading');
     setRetryCount((count) => count + 1);
-  }, [mockRow]);
+  }, [mockRow, resetSlip]);
 
   const dateLocale = getDateLocale(i18n.language);
   const invoice = readInvoice(row);
@@ -466,6 +503,21 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   // of a fresh "Pay now" ask for money that's already on its way.
   const canPay = collectable && remainingDue > 0;
   const awaitingVerification = collectable && !canPay && balanceDue > 0 && pendingAmount > 0;
+
+  // Not memoized: `invoice`/`remainingDue` only exist past the early returns
+  // above, so this can't be a useCallback (that would call a hook
+  // conditionally). It only ever runs from a click inside the QR popup.
+  const handleSlipSend = async () => {
+    if (!slipPayload) return;
+    setSlipStage('sending');
+    const outcome = await submitSlip({
+      invoiceNumber: invoice.invoiceNumber,
+      balanceDue: remainingDue,
+      ...slipPayload,
+    });
+    setSlipResult(outcome);
+    setSlipStage('result');
+  };
 
   // Footer content is derived once so every visible state shares one fixed-height
   // bar. Draft intentionally has no footer. Other invoice statuses are surfaced
@@ -649,6 +701,22 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
                 <p className="font-body text-[11px] text-amber-700 leading-relaxed">
                   {t('invoice.pay.pendingNotice')}
                 </p>
+              </div>
+            )}
+
+            {/* Attach-a-slip flow: same screen the customer is already on
+                after scanning and transferring. canPay-gated — nothing left
+                to submit once pending money already covers the balance. */}
+            {canPay && (
+              <div className="w-full mt-4 pt-4 border-t border-outline-variant/25">
+                <SlipUpload
+                  stage={slipStage}
+                  previewUrl={slipPreviewUrl}
+                  result={slipResult}
+                  onPick={handleSlipPick}
+                  onSend={handleSlipSend}
+                  onReset={resetSlip}
+                />
               </div>
             )}
           </div>
