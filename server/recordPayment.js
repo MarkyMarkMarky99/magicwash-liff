@@ -1,6 +1,7 @@
 /**
- * Verified slip Payment recorder — single self-contained ESM module.
- * Public API: createPaymentRecorder, validatePaymentRow.
+ * Payment recorder — single self-contained ESM module.
+ * Records one payment/refund row (VERIFIED or PENDING) per call; an invoice
+ * may have many rows. Public API: createPaymentRecorder, validatePaymentRow.
  * Zero deps. Node 18+. Never throws across public boundaries.
  * @module recordPayment
  */
@@ -38,6 +39,7 @@ const PAYMENT_STATUSES = Object.freeze([
   "CANCELLED",
 ]);
 const SLIP_PAYMENT_METHODS = Object.freeze(["BANK_TRANSFER", "QR_PROMPTPAY"]);
+const RECORD_STATUSES = Object.freeze(["VERIFIED", "PENDING"]);
 export const MAX_SLIP_DATA_LENGTH = 50_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const PAYMENT_ID_PATTERN =
@@ -58,14 +60,15 @@ const INPUT_KEYS = new Set([
   "amount",
   "paidAt",
   "reference",
+  "status",
+  "notes",
   "verification",
   "method",
   "proofUrl",
 ]);
-const INVOICE_KEYS = new Set(["invoiceNumber", "expectedAmount", "currency"]);
+const INVOICE_KEYS = new Set(["invoiceNumber", "balanceDue", "currency"]);
 const AUTHORITY_KEYS = new Set([
   "source",
-  "authoritativeInvoiceAmountThb",
   "acceptedSlipAmountCurrency",
   "slipOkAmountCheckUsed",
   "slipOkReceiverCheckUsed",
@@ -153,6 +156,25 @@ function nonZeroFiniteNumber(value, path, issues) {
     return undefined;
   }
   return number;
+}
+function nullableFiniteNumber(value, path, issues) {
+  if (value === null) {
+    return null;
+  }
+  return finiteNumber(value, path, issues);
+}
+function nullableNonZeroFiniteNumber(value, path, issues) {
+  if (value === null) {
+    return null;
+  }
+  return nonZeroFiniteNumber(value, path, issues);
+}
+function booleanValue(value, path, issues) {
+  if (typeof value !== "boolean") {
+    addIssue(issues, path, "invalid_type", "Expected a boolean.");
+    return undefined;
+  }
+  return value;
 }
 function literalValue(value, literal, path, issues) {
   if (value !== literal) {
@@ -392,8 +414,8 @@ function validateRecordInputValue(candidate) {
   );
   
   let invoiceNumber;
-  
-  let expectedAmount;
+
+  let balanceDue;
   if (invoice !== undefined) {
     reportUnexpectedKeys(invoice, INVOICE_KEYS, "invoice", issues);
     invoiceNumber = nonEmptyString(
@@ -401,9 +423,9 @@ function validateRecordInputValue(candidate) {
       "invoice.invoiceNumber",
       issues,
     );
-    expectedAmount = positiveNumber(
-      requiredValue(invoice, "expectedAmount", "invoice.expectedAmount", issues),
-      "invoice.expectedAmount",
+    balanceDue = nullableFiniteNumber(
+      requiredValue(invoice, "balanceDue", "invoice.balanceDue", issues),
+      "invoice.balanceDue",
       issues,
     );
     literalValue(
@@ -418,24 +440,12 @@ function validateRecordInputValue(candidate) {
     "authority",
     issues,
   );
-  
-  let authoritativeAmount;
   if (authority !== undefined) {
     reportUnexpectedKeys(authority, AUTHORITY_KEYS, "authority", issues);
     literalValue(
       requiredValue(authority, "source", "authority.source", issues),
       "trusted_server",
       "authority.source",
-      issues,
-    );
-    authoritativeAmount = positiveNumber(
-      requiredValue(
-        authority,
-        "authoritativeInvoiceAmountThb",
-        "authority.authoritativeInvoiceAmountThb",
-        issues,
-      ),
-      "authority.authoritativeInvoiceAmountThb",
       issues,
     );
     literalValue(
@@ -449,41 +459,38 @@ function validateRecordInputValue(candidate) {
       "authority.acceptedSlipAmountCurrency",
       issues,
     );
-    literalValue(
+    booleanValue(
       requiredValue(
         authority,
         "slipOkAmountCheckUsed",
         "authority.slipOkAmountCheckUsed",
         issues,
       ),
-      true,
       "authority.slipOkAmountCheckUsed",
       issues,
     );
-    literalValue(
+    booleanValue(
       requiredValue(
         authority,
         "slipOkReceiverCheckUsed",
         "authority.slipOkReceiverCheckUsed",
         issues,
       ),
-      true,
       "authority.slipOkReceiverCheckUsed",
       issues,
     );
-    literalValue(
+    booleanValue(
       requiredValue(
         authority,
         "slipOkDuplicateCheckUsed",
         "authority.slipOkDuplicateCheckUsed",
         issues,
       ),
-      true,
       "authority.slipOkDuplicateCheckUsed",
       issues,
     );
   }
-  const amount = nonZeroFiniteNumber(
+  const amount = nullableNonZeroFiniteNumber(
     requiredValue(input, "amount", "amount", issues),
     "amount",
     issues,
@@ -496,6 +503,17 @@ function validateRecordInputValue(candidate) {
   const reference = nullableStringInput(
     requiredValue(input, "reference", "reference", issues),
     "reference",
+    issues,
+  );
+  const status = enumValue(
+    requiredValue(input, "status", "status", issues),
+    RECORD_STATUSES,
+    "status",
+    issues,
+  );
+  const notes = nullableStringInput(
+    requiredValue(input, "notes", "notes", issues),
+    "notes",
     issues,
   );
   const verification = requireObject(
@@ -518,12 +536,12 @@ function validateRecordInputValue(candidate) {
       "verification.httpStatus",
       issues,
     );
-    if (httpStatus !== undefined && httpStatus !== 200) {
+    if (httpStatus !== undefined && !Number.isInteger(httpStatus)) {
       addIssue(
         issues,
         "verification.httpStatus",
         "invalid_value",
-        "SlipOK verification must have HTTP status 200.",
+        "Expected an integer HTTP status code.",
       );
     }
     if (!hasOwn(verification, "response") || verification.response === undefined) {
@@ -560,39 +578,16 @@ function validateRecordInputValue(candidate) {
     issues,
   );
   if (
-    amount !== undefined &&
-    expectedAmount !== undefined &&
-    amount !== expectedAmount
-  ) {
-    addIssue(
-      issues,
-      "amount",
-      "amount_mismatch",
-      "amount does not exactly match invoice.expectedAmount.",
-    );
-  }
-  if (
-    amount !== undefined &&
-    authoritativeAmount !== undefined &&
-    amount !== authoritativeAmount
-  ) {
-    addIssue(
-      issues,
-      "amount",
-      "amount_mismatch",
-      "amount does not exactly match authority.authoritativeInvoiceAmountThb.",
-    );
-  }
-  if (
     issues.length > 0 ||
     paymentId === undefined ||
     invoiceNumber === undefined ||
-    expectedAmount === undefined ||
+    balanceDue === undefined ||
     authority === undefined ||
-    authoritativeAmount === undefined ||
     amount === undefined ||
     paidAt === undefined ||
     reference === undefined ||
+    status === undefined ||
+    notes === undefined ||
     !hasVerificationResponse ||
     method === undefined ||
     proofUrl === undefined
@@ -604,11 +599,13 @@ function validateRecordInputValue(candidate) {
     input: {
       paymentId,
       invoiceNumber,
-      expectedAmount,
+      balanceDue,
       authority,
       amount,
       paidAt,
       reference,
+      status,
+      notes,
       verificationResponse,
       method,
       proofUrl,
@@ -635,10 +632,7 @@ function validatePaymentRowValue(candidate) {
     "row.invoice_number",
     issues,
   );
-  const amount = finiteNumber(row.amount, "row.amount", issues);
-  if (amount === 0) {
-    addIssue(issues, "row.amount", "invalid_value", "Zero is not allowed.");
-  }
+  const amount = nullableNonZeroFiniteNumber(row.amount, "row.amount", issues);
   const method = enumValue(row.method, PAYMENT_METHODS, "row.method", issues);
   const status = enumValue(row.status, PAYMENT_STATUSES, "row.status", issues);
   const paidAt = nullableIsoTimestamp(row.paid_at, "row.paid_at", issues);
@@ -665,7 +659,6 @@ function validatePaymentRowValue(candidate) {
     paymentId === undefined ||
     invoiceNumber === undefined ||
     amount === undefined ||
-    amount === 0 ||
     method === undefined ||
     status === undefined ||
     paidAt === undefined ||
@@ -720,12 +713,12 @@ export function buildVerifiedPaymentRow(input) {
     invoice_number: input.invoiceNumber,
     amount: input.amount,
     method: input.method,
-    status: "VERIFIED",
+    status: input.status,
     paid_at: input.paidAt,
     reference: input.reference,
     proof_url: input.proofUrl,
     slip_data: input.slipData,
-    notes: null,
+    notes: input.notes,
     created_at: input.createdAt,
     created_by: input.createdBy,
     updated_at: null,
@@ -741,10 +734,15 @@ function protectNullableText(value) {
   return value === null ? null : protectText(value);
 }
 function toPaymentWireRow(row) {
+  // `amount` is omitted entirely when unknown rather than sent as JSON null.
+  // The live sheet schema declares `amount` as `"type": "number"` and only
+  // dropped it from `required`, so a literal null would fail validation at the
+  // gateway; an absent key is what produces the blank cell the schema's own
+  // description calls for ("may be left blank ... an admin fills it in").
   return {
     payment_id: protectText(row.payment_id),
     invoice_number: protectText(row.invoice_number),
-    amount: row.amount,
+    ...(row.amount === null ? {} : { amount: row.amount }),
     method: row.method,
     status: row.status,
     paid_at: protectNullableText(row.paid_at),
@@ -960,6 +958,8 @@ function makeRecorder(config) {
           amount: validated.input.amount,
           paidAt: validated.input.paidAt,
           reference: validated.input.reference,
+          status: validated.input.status,
+          notes: validated.input.notes,
           slipData,
           createdAt,
           createdBy: config.createdBy,

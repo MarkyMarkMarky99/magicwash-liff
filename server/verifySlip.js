@@ -180,9 +180,21 @@ const BASE64_PATTERN =
  */
 
 /**
+ * @typedef {object} NormalizedSlip
+ * @property {number | null} amount
+ * @property {string | null} paidAt
+ * @property {string | null} reference
+ * @property {string | null} senderName
+ * @property {string | null} receiverName
+ * @property {string | null} sendingBankCode
+ * @property {string | null} receivingBankCode
+ */
+
+/**
  * @typedef {object} VerifySuccess
  * @property {"success"} kind
  * @property {SlipData} data
+ * @property {NormalizedSlip} slip
  */
 
 /**
@@ -354,6 +366,7 @@ const BASE64_PATTERN =
  * @property {number} status
  * @property {string} message
  * @property {SlipData} data
+ * @property {NormalizedSlip} slip
  */
 
 /**
@@ -363,6 +376,7 @@ const BASE64_PATTERN =
  * @property {number} status
  * @property {string} message
  * @property {SlipData} data
+ * @property {NormalizedSlip} slip
  */
 
 /**
@@ -372,6 +386,7 @@ const BASE64_PATTERN =
  * @property {number} status
  * @property {string} message
  * @property {SlipData} data
+ * @property {NormalizedSlip} slip
  */
 
 /**
@@ -1246,6 +1261,221 @@ function parseSlipData(value) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Slip normalization (provider-shape extraction lives here, not with callers)
+// ---------------------------------------------------------------------------
+
+const TRANS_DATE_PATTERN = /^\d{8}$/;
+const TRANS_TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/;
+
+/**
+ * @param {number} year
+ * @returns {boolean}
+ */
+function isLeapYear(year) {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * @param {number} year
+ * @param {number} month 1-based
+ * @returns {number}
+ */
+function daysInMonth(year, month) {
+  const days = [
+    31,
+    isLeapYear(year) ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
+  return /** @type {number} */ (days[month - 1]);
+}
+
+/**
+ * Pure calendar validation — deliberately avoids the Date constructor so
+ * two-digit years are never silently reinterpreted as 19xx.
+ *
+ * @param {number} year
+ * @param {number} month
+ * @param {number} day
+ * @returns {boolean}
+ */
+function isRealCalendarDate(year, month, day) {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
+    return false;
+  }
+  if (month < 1 || month > 12 || day < 1) {
+    return false;
+  }
+  return day <= daysInMonth(year, month);
+}
+
+/**
+ * Rule 1 of paidAt derivation: use transTimestamp verbatim-parsed when valid.
+ *
+ * @param {unknown} transTimestamp
+ * @returns {string | null}
+ */
+function paidAtFromTimestamp(transTimestamp) {
+  try {
+    if (typeof transTimestamp !== "string" || transTimestamp.trim() === "") {
+      return null;
+    }
+    const parsed = new Date(transTimestamp);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+    return parsed.toISOString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Rule 2 of paidAt derivation: build from transDate ("yyyyMMdd") and
+ * transTime ("HH:mm:ss") as "yyyy-MM-ddTHH:mm:ss+07:00".
+ *
+ * The +07:00 offset is an inference, not documented by the provider: the
+ * provider's own guide example pairs transDate "20200401" / transTime
+ * "10:15:07" with transTimestamp "2020-04-01T03:15:07.000Z" — exactly 7
+ * hours apart, i.e. Asia/Bangkok. Live capture A in
+ * docs/live-captures.md corroborates the same 7-hour offset
+ * (transDate/transTime 13:43:12 vs transTimestamp 06:43:12Z).
+ *
+ * @param {unknown} transDate
+ * @param {unknown} transTime
+ * @returns {string | null}
+ */
+function paidAtFromTransDateTime(transDate, transTime) {
+  try {
+    if (typeof transDate !== "string" || typeof transTime !== "string") {
+      return null;
+    }
+    if (!TRANS_DATE_PATTERN.test(transDate) || !TRANS_TIME_PATTERN.test(transTime)) {
+      return null;
+    }
+    const year = Number(transDate.slice(0, 4));
+    const month = Number(transDate.slice(4, 6));
+    const day = Number(transDate.slice(6, 8));
+    if (!isRealCalendarDate(year, month, day)) {
+      return null;
+    }
+    return `${transDate.slice(0, 4)}-${transDate.slice(4, 6)}-${transDate.slice(6, 8)}T${transTime}+07:00`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {unknown} transTimestamp
+ * @param {unknown} transDate
+ * @param {unknown} transTime
+ * @returns {string | null}
+ */
+function derivePaidAt(transTimestamp, transDate, transTime) {
+  try {
+    return (
+      paidAtFromTimestamp(transTimestamp) ??
+      paidAtFromTransDateTime(transDate, transTime)
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * displayName wins when it is a non-empty string; otherwise fall back to
+ * name. Real responses have shown Thai in one field and English in the
+ * other, and name === null while only displayName is usable — never
+ * assume either field's language or presence.
+ *
+ * @param {SlipSender | SlipReceiver | null | undefined} party
+ * @returns {string | null}
+ */
+function derivePartyName(party) {
+  try {
+    if (!isRecord(party)) {
+      return null;
+    }
+    if (isNonblankString(party.displayName)) {
+      return party.displayName;
+    }
+    if (isNonblankString(party.name)) {
+      return party.name;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function toNullableBankCode(value) {
+  return isNonblankString(value) ? value : null;
+}
+
+/**
+ * Extract meaning from a provider SlipData payload. Runs only on an
+ * already-validated {@link SlipData} object (the output of
+ * {@link parseSlipData}), which by construction holds only plain sanitized
+ * values — no getters, no prototype tricks — so nothing here can throw from
+ * hostile upstream input. The try/catch is defense in depth, not load
+ * bearing: any field that cannot be read degrades to null.
+ *
+ * Never call this with the code-1010 bank-delay payload — that is a
+ * different shape entirely (bank delay metadata), not a slip.
+ *
+ * @param {SlipData} slipData
+ * @returns {NormalizedSlip}
+ */
+function normalizeSlip(slipData) {
+  try {
+    const record = isRecord(slipData) ? slipData : {};
+    return {
+      amount: isFiniteNumber(record.amount) ? record.amount : null,
+      paidAt: derivePaidAt(
+        record.transTimestamp,
+        record.transDate,
+        record.transTime,
+      ),
+      reference: isNonblankString(record.transRef) ? record.transRef : null,
+      senderName: derivePartyName(
+        /** @type {SlipSender | null | undefined} */ (record.sender),
+      ),
+      receiverName: derivePartyName(
+        /** @type {SlipReceiver | null | undefined} */ (record.receiver),
+      ),
+      sendingBankCode: toNullableBankCode(record.sendingBank),
+      receivingBankCode: toNullableBankCode(record.receivingBank),
+    };
+  } catch {
+    return {
+      amount: null,
+      paidAt: null,
+      reference: null,
+      senderName: null,
+      receiverName: null,
+      sendingBankCode: null,
+      receivingBankCode: null,
+    };
+  }
+}
+
 /**
  * @param {unknown} value
  * @returns {BankDelayData | null}
@@ -1454,6 +1684,7 @@ function dispatchApiError(code, status, data) {
         status,
         message: "SlipOK identified a duplicate slip.",
         data: slipData,
+        slip: normalizeSlip(slipData),
       };
     }
     case 1013: {
@@ -1467,6 +1698,7 @@ function dispatchApiError(code, status, data) {
         status,
         message: "The submitted amount does not match the slip amount.",
         data: slipData,
+        slip: normalizeSlip(slipData),
       };
     }
     case 1014: {
@@ -1480,6 +1712,7 @@ function dispatchApiError(code, status, data) {
         status,
         message: "The slip receiver does not match the branch receiver.",
         data: slipData,
+        slip: normalizeSlip(slipData),
       };
     }
     case 1015:
@@ -1801,6 +2034,9 @@ function apiResult(apiKey, status, code, data) {
   if ("data" in dispatched) {
     exposedValues.push(dispatched.data);
   }
+  if ("slip" in dispatched) {
+    exposedValues.push(dispatched.slip);
+  }
   return guardUpstreamResult(apiKey, exposedValues, dispatched);
 }
 
@@ -1876,9 +2112,11 @@ function createClient(branchId, apiKey, timeoutMs, runtime) {
             const afterGuard = afterSynchronousStage(startedAt, timeoutMs);
             return afterGuard ?? guarded;
           }
-          const guarded = guardUpstreamResult(apiKey, [data], {
+          const slip = normalizeSlip(data);
+          const guarded = guardUpstreamResult(apiKey, [data, slip], {
             kind: /** @type {const} */ ("success"),
             data,
+            slip,
           });
           const afterGuard = afterSynchronousStage(startedAt, timeoutMs);
           return afterGuard ?? guarded;
