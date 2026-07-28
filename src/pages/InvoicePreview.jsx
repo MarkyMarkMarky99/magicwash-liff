@@ -8,9 +8,9 @@ import DateChip from '../components/ui/DateChip';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
 import PageActionFooter from '../components/ui/PageActionFooter';
 import SectionCard, { BADGE_PILL } from '../components/ui/SectionCard';
-import SlipUpload from '../components/invoice/SlipUpload';
+import PaymentPopup from '../components/invoice/PaymentPopup';
 import { preprocessSlipImage, submitSlip } from '../services/slipUpload';
-import qrPaymentImage from '../assets/IMG_8640.webp';
+import qrPaymentImage from '../assets/IMG_8667.webp';
 
 const STATUS_STYLES = {
   DRAFT:          { badge: 'bg-gray-100 text-gray-600',                icon: 'draft' },
@@ -679,49 +679,21 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
         </Lightbox>
       )}
 
-      {payOpen && (
-        <Lightbox label={t('invoice.pay.title')} onClose={closePay}>
-          {/* Content order is deliberate: QR first, then what/why it's for, then
-              any guidance — so the QR is never buried under text on a small screen. */}
-          <div className="w-[280px] max-w-full max-h-[80vh] overflow-y-auto no-scrollbar bg-surface-container-lowest rounded-2xl shadow-2xl p-5 flex flex-col items-center text-center">
-            <img
-              src={qrPaymentImage}
-              alt={t('invoice.pay.title')}
-              className="w-full rounded-xl"
-            />
-            <p className="font-headline font-bold text-[22px] text-on-surface leading-tight mt-4">
-              {formatMoney(awaitingVerification ? pendingAmount : remainingDue, currency)}
-            </p>
-            <p className="font-body text-[12px] text-on-surface-variant mt-0.5">
-              {t('invoice.pay.title')}
-            </p>
-            {awaitingVerification && (
-              <div className="w-full mt-3 pt-3 border-t border-outline-variant/25 flex items-start gap-2 text-left">
-                <span className="material-symbols-outlined text-amber-600 text-[16px] leading-none mt-0.5" aria-hidden="true">hourglass_top</span>
-                <p className="font-body text-[11px] text-amber-700 leading-relaxed">
-                  {t('invoice.pay.pendingNotice')}
-                </p>
-              </div>
-            )}
-
-            {/* Attach-a-slip flow: same screen the customer is already on
-                after scanning and transferring. canPay-gated — nothing left
-                to submit once pending money already covers the balance. */}
-            {canPay && (
-              <div className="w-full mt-4 pt-4 border-t border-outline-variant/25">
-                <SlipUpload
-                  stage={slipStage}
-                  previewUrl={slipPreviewUrl}
-                  result={slipResult}
-                  onPick={handleSlipPick}
-                  onSend={handleSlipSend}
-                  onReset={resetSlip}
-                />
-              </div>
-            )}
-          </div>
-        </Lightbox>
-      )}
+      <PaymentPopup
+        open={payOpen}
+        qrImage={qrPaymentImage}
+        invoiceRef={invoice.invoiceNumber}
+        amountLabel={formatMoney(awaitingVerification ? pendingAmount : remainingDue, currency)}
+        pendingNotice={awaitingVerification ? t('invoice.pay.pendingNotice') : null}
+        canSubmit={canPay}
+        stage={slipStage}
+        previewUrl={slipPreviewUrl}
+        result={slipResult}
+        onPick={handleSlipPick}
+        onReset={resetSlip}
+        onSend={handleSlipSend}
+        onClose={closePay}
+      />
     </div>
   );
 }

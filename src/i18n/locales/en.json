@@ -109,7 +109,17 @@
       "title": "Scan to pay",
       "paidLabel": "Paid in full",
       "pendingLabel": "Payment pending",
-      "pendingNotice": "We're verifying your payment — no need to pay again."
+      "pendingNotice": "We're verifying your payment — no need to pay again.",
+      "closeAria": "Close payment dialog",
+      "scanNotice": "Scan QR to transfer to account",
+      "bankLabel": "Bank",
+      "nameLabel": "Name",
+      "accountLabel": "Account No.",
+      "copyAccount": "Copy account number",
+      "copied": "Copied",
+      "ref1": "Ref 1",
+      "ref2": "Ref 2",
+      "amountLabel": "Total amount"
     },
     "status": {
       "DRAFT": "Draft",
@@ -165,10 +175,10 @@
       "pending": "Slip received. Our staff will check it and confirm shortly.",
       "attach": "Attach payment slip",
       "previewAlt": "Selected payment slip",
-      "replace": "Choose a different photo",
-      "cancel": "Cancel",
       "send": "Send slip",
       "sending": "Sending your slip… this can take up to 30 seconds",
+      "verifying": "Verifying…",
+      "clear": "Remove selected slip",
       "resultTitle": {
         "verified": "Payment confirmed",
         "pending": "Slip received",
