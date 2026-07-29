@@ -548,10 +548,28 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
 
     if (outcome.tone === 'success' && !mockRow) {
       invalidateInvoiceCache(invoice.invoiceNumber);
-      if (outcome.invoiceViewSynced === true) {
+      // Refresh regardless of `invoiceViewSynced`. This used to be gated on
+      // `=== true`, which meant a slow sync (the server gives up on it after a
+      // bounded wait) left the customer staring at the pre-payment row with no
+      // way to refresh short of reopening the invoice. A false flag means "the
+      // server stopped waiting," NOT "the view will never update" — Apps Script
+      // may well have finished the upsert after the server walked away, so the
+      // read is still worth making, just later and more than once.
+      const attemptDelaysMs = outcome.invoiceViewSynced === true ? [0] : [0, 2_000, 5_000];
+      for (const delayMs of attemptDelaysMs) {
+        if (delayMs > 0) {
+          await new Promise((resolve) => { setTimeout(resolve, delayMs); });
+          invalidateInvoiceCache(invoice.invoiceNumber);
+        }
         try {
           const fresh = await getInvoiceByNumber(invoice.invoiceNumber);
-          if (fresh) setRow(fresh);
+          if (fresh) {
+            setRow(fresh);
+            // Stop as soon as the view reflects the payment. On the confirmed
+            // path this is the only pass anyway; on the unconfirmed one it
+            // avoids burning the remaining reads once the row has caught up.
+            if (readInvoice(fresh)?.status !== invoice.status) break;
+          }
         } catch {
           // The payment result is already final; a refresh failure is harmless.
         }
