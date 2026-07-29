@@ -34,6 +34,7 @@ import { randomUUID } from 'node:crypto';
 import { uploadSlip } from '../server/uploadSlip.js';
 import { createSlipOkClient } from '../server/verifySlip.js';
 import { createPaymentRecorder } from '../server/recordPayment.js';
+import { syncInvoiceView } from '../server/invoiceViewSync.js';
 
 // ---------------------------------------------------------------------------
 // Timeout budget
@@ -63,133 +64,7 @@ import { createPaymentRecorder } from '../server/recordPayment.js';
 // ---------------------------------------------------------------------------
 const VERIFY_TIMEOUT_MS = 7_000;
 const RECORD_TIMEOUT_MS = 15_000;
-const INVOICE_VIEW_SYNC_TIMEOUT_MS = 15_000;
-
 const RECORD_CREATED_BY = 'liff-verify-slip';
-
-function logInvoiceViewSyncFailure(reason, status) {
-  try {
-    const details = status === undefined ? { reason } : { reason, status };
-    console.warn('[verify-slip] InvoiceView sync did not complete.', details);
-  } catch {
-    // Observability must never affect the payment result.
-  }
-}
-
-/**
- * Refresh the invoice read model after the payment row is confirmed.
- *
- * This is deliberately best-effort. The payment row is the source of truth
- * for this route, and a slow or unavailable read-model sync must not change
- * the response already earned by the customer.
- */
-async function syncInvoiceView(invoiceNumber) {
-  try {
-    const configuredUrl = process.env.APPSCRIPT_INVOICE_VIEW_SYNC_URL;
-    if (typeof configuredUrl !== 'string' || configuredUrl.trim().length === 0) {
-      logInvoiceViewSyncFailure('missing_config');
-      return false;
-    }
-
-    let endpointUrl;
-    try {
-      endpointUrl = new URL(configuredUrl);
-    } catch {
-      logInvoiceViewSyncFailure('invalid_config');
-      return false;
-    }
-    if (endpointUrl.protocol !== 'http:' && endpointUrl.protocol !== 'https:') {
-      logInvoiceViewSyncFailure('invalid_config');
-      return false;
-    }
-
-    if (typeof globalThis.fetch !== 'function' || typeof globalThis.AbortController !== 'function') {
-      logInvoiceViewSyncFailure('runtime_unavailable');
-      return false;
-    }
-
-    const controller = new globalThis.AbortController();
-    let timeoutHandle;
-    let resolveTimeout;
-    const timeoutPromise = new Promise((resolve) => {
-      resolveTimeout = resolve;
-      timeoutHandle = setTimeout(() => {
-        try {
-          controller.abort();
-        } catch {
-          // The timeout result is still authoritative for this best-effort call.
-        }
-        resolveTimeout({ kind: 'timeout' });
-      }, INVOICE_VIEW_SYNC_TIMEOUT_MS);
-    });
-
-    const fetchPromise = Promise.resolve()
-      .then(() => globalThis.fetch(configuredUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ invoiceNumber }),
-        signal: controller.signal,
-      }))
-      .then(async (response) => {
-        let status;
-        let ok;
-        let body;
-        try {
-          status = response?.status;
-          ok = response?.ok;
-          if (!Number.isInteger(status) || status < 100 || status > 599 || typeof ok !== 'boolean') {
-            return { kind: 'invalid_response' };
-          }
-          if (typeof response.json !== 'function') {
-            return { kind: 'invalid_response' };
-          }
-          body = await response.json();
-        } catch {
-          return { kind: 'invalid_response' };
-        }
-        return { kind: 'response', status, ok, body };
-      })
-      .catch(() => ({ kind: 'network_failure' }));
-
-    let result;
-    try {
-      result = await Promise.race([fetchPromise, timeoutPromise]);
-    } finally {
-      clearTimeout(timeoutHandle);
-    }
-
-    if (result.kind === 'timeout') {
-      logInvoiceViewSyncFailure('timeout');
-      return false;
-    }
-    if (result.kind === 'network_failure') {
-      logInvoiceViewSyncFailure('network_failure');
-      return false;
-    }
-    if (result.kind === 'invalid_response') {
-      logInvoiceViewSyncFailure('invalid_response');
-      return false;
-    }
-
-    let bodyAccepted = false;
-    try {
-      bodyAccepted = result.body?.ok === true;
-    } catch {
-      bodyAccepted = false;
-    }
-    if (!result.ok) {
-      logInvoiceViewSyncFailure('rejected_http', result.status);
-      return false;
-    } else if (!bodyAccepted) {
-      logInvoiceViewSyncFailure('rejected_body', result.status);
-      return false;
-    }
-    return true;
-  } catch {
-    logInvoiceViewSyncFailure('unexpected_failure');
-    return false;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Small pure helpers
@@ -491,7 +366,7 @@ export default async function handler(req, res) {
     }
 
     // Row confirmed written.
-    const invoiceViewSynced = await syncInvoiceView(invoiceNumber);
+    const invoiceViewSynced = await syncInvoiceView(invoiceNumber, { logPrefix: 'verify-slip' });
 
     if (verified) {
       return res.status(200).json({
