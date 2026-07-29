@@ -3,6 +3,9 @@
   "functions": {
     "api/verify-slip.js": {
       "maxDuration": 60
+    },
+    "api/sync-invoice-view.js": {
+      "maxDuration": 20
     }
   }
 }

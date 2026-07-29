@@ -2,7 +2,12 @@ import { useState, useEffect, useContext, useRef, useCallback, useId } from 'rea
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
-import { getInvoiceByNumber, invalidateInvoiceCache } from '../api/gvizApi';
+import {
+  getInvoiceByNumber,
+  getInvoiceByNumberFresh,
+  invalidateInvoiceCache,
+  syncInvoiceView,
+} from '../api/gvizApi';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
@@ -37,6 +42,8 @@ const METHOD_ICONS = {
   GIFT_VOUCHER:  'redeem',
   OTHER:         'receipt_long',
 };
+
+const OUTSTANDING_INVOICE_STATUSES = new Set(['UNPAID', 'PARTIALLY_PAID', 'OVERDUE']);
 
 /* ── Defensive parsing ──
    Rows arrive raw from the sheet: nested documents are JSON strings that may be
@@ -396,33 +403,69 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
 
     if (mockRow) {
-      return () => { active = false; };
+      return () => {
+        active = false;
+        controller.abort();
+      };
     }
 
     if (!requestedInvoiceNumber) {
-      return () => { active = false; };
+      setRow(null);
+      setStatus('notFound');
+      return () => {
+        active = false;
+        controller.abort();
+      };
     }
 
-    getInvoiceByNumber(
-      requestedInvoiceNumber,
-      (fresh) => {
-        if (active) setRow(fresh);
-      },
-    )
-      .then((fresh) => {
+    setRow(null);
+    setStatus('loading');
+
+    async function loadInvoice() {
+      try {
+        const fresh = await getInvoiceByNumberFresh(requestedInvoiceNumber, {
+          signal: controller.signal,
+        });
         if (!active) return;
-        setRow(fresh);
-        setStatus(fresh ? 'done' : 'notFound');
-      })
-      .catch(() => {
-        if (!active) return;
+
+        if (!fresh) {
+          setStatus('notFound');
+          return;
+        }
+
+        const invoice = readInvoice(fresh);
+        const hasOutstandingBalance = (invoice?.balanceDue ?? 0) > 0;
+        const hasOutstandingStatus = OUTSTANDING_INVOICE_STATUSES.has(invoice?.status);
+
+        let finalRow = fresh;
+        if (hasOutstandingBalance || hasOutstandingStatus) {
+          await syncInvoiceView(requestedInvoiceNumber, { signal: controller.signal });
+          if (!active) return;
+          finalRow = await getInvoiceByNumberFresh(requestedInvoiceNumber, {
+            signal: controller.signal,
+          });
+          if (!active) return;
+          if (!finalRow) throw new Error('Invoice disappeared after sync');
+        }
+
+        setRow(finalRow);
+        setStatus('done');
+      } catch (error) {
+        if (!active || error?.name === 'AbortError') return;
         setRow(null);
         setStatus('error');
-      });
+      }
+    }
 
-    return () => { active = false; };
+    loadInvoice();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [mockRow, requestedInvoiceNumber, retryCount]);
 
   const closeProof = useCallback(() => setProofUrl(null), []);

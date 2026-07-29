@@ -1,4 +1,4 @@
-import { cacheKey, gvizSwrFetch, lsClear } from './localCache';
+import { cacheKey, gvizSwrFetch, gvizUrl, lsClear, lsSet } from './localCache';
 
 const INVOICE_VIEW_COLS = 'invoiceNumber,status,billingType,billingPeriodStart,billingPeriodEnd,issuedDate,dueDate,customerId,customerJson,itemsJson,adjustmentsJson,paymentsJson,subtotal,adjustmentTotal,grandTotal,paidAmount,balanceDue';
 
@@ -54,4 +54,39 @@ export async function getInvoiceByNumber(invoiceNumber, onRevalidate) {
     'invoiceView',
   );
   return rows[0] ?? null;
+}
+
+export async function getInvoiceByNumberFresh(invoiceNumber, { signal } = {}) {
+  const normalizedInvoiceNumber = normalizeInvoiceNumber(invoiceNumber);
+  const key = cacheKey('invoiceView', normalizedInvoiceNumber);
+  lsClear(key);
+
+  const url = gvizUrl({
+    source: 'invoiceView',
+    filterField: 'invoiceNumber',
+    filterValue: normalizedInvoiceNumber,
+    limit: 1,
+    cols: INVOICE_VIEW_COLS,
+  });
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const rows = await res.json();
+  if (!Array.isArray(rows)) throw new Error('[gvizApi] Invalid invoice response');
+  if (rows.length) lsSet(key, rows);
+  return rows[0] ?? null;
+}
+
+export async function syncInvoiceView(invoiceNumber, { signal } = {}) {
+  const normalizedInvoiceNumber = normalizeInvoiceNumber(invoiceNumber);
+  const res = await fetch('/api/sync-invoice-view', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ invoiceNumber: normalizedInvoiceNumber }),
+    signal,
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const result = await res.json();
+  if (result?.ok !== true) throw new Error('[gvizApi] Invoice sync failed');
 }
