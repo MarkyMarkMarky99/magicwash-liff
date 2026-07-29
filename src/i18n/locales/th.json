@@ -205,6 +205,12 @@
     "receivedDate": "รับผ้า",
     "dueDate": "กำหนดส่ง",
     "serviceType": "ประเภท",
+    "serviceTypes": {
+      "WASH": "ซักพับ",
+      "WSIR": "ซักรีด",
+      "DRCL": "ซักแห้ง",
+      "IRON": "รีด"
+    },
     "tracking": {
       "pickup": "รับผ้า",
       "delivery": "ส่งคืน",

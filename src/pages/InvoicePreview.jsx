@@ -690,7 +690,7 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
                           </p>
                           {item.serviceType && (
                             <span className="inline-flex items-center px-2 py-px rounded-full bg-surface-container font-label text-[9px] font-bold text-on-surface-variant shrink-0">
-                              {item.serviceType}
+                              {t(`activeOrder.serviceTypes.${item.serviceType}`, { defaultValue: item.serviceType })}
                             </span>
                           )}
                         </div>

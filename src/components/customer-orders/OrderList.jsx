@@ -12,7 +12,6 @@ export default function OrderList({ orders, waitingPickups = [], onViewPhotos, o
       icon="receipt_long"
       title={t('customerOrders.orderHistory')}
       badge={t('customerOrders.ordersCount', { count: orders.length })}
-      collapsible
       action={
         <button
           type="button"

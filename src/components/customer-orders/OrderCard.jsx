@@ -52,10 +52,10 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
           </span>
         </div>
 
-        {/* Row 2: notes / serviceType + invoice + photo icons */}
+        {/* Row 2: note + invoice + photo icons */}
         <div className="flex items-center justify-between gap-2">
           <p className="font-body text-xs text-on-surface-variant truncate">
-            {order.note || order.serviceType || ''}
+            {order.note || ''}
           </p>
           <div
             className="flex items-center gap-2 shrink-0"

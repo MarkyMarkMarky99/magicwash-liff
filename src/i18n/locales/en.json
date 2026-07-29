@@ -205,6 +205,12 @@
     "receivedDate": "Picked up",
     "dueDate": "Due Date",
     "serviceType": "Service",
+    "serviceTypes": {
+      "WASH": "Wash & Fold",
+      "WSIR": "Wash & Iron",
+      "DRCL": "Dry Clean",
+      "IRON": "Iron"
+    },
     "tracking": {
       "pickup": "Pickup",
       "delivery": "Delivery",
