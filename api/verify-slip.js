@@ -39,8 +39,8 @@ import { createPaymentRecorder } from '../server/recordPayment.js';
 // Timeout budget
 //
 // The whole request runs inside one serverless invocation. The route's
-// maxDuration is 30s, so the explicit downstream budgets below total 27s and
-// leave roughly 3s for upload completion, response parsing, and formatting:
+// maxDuration is 60s, so the explicit downstream budgets below total 37s and
+// leave ample room for upload completion, response parsing, and formatting:
 //   - SlipOK verification:  7s.  It's a single OCR+bank-lookup round trip;
 //     if it hasn't answered in 7s the bank-delay/timeout path already exists
 //     and a slower answer wouldn't change what we can safely tell the customer.
@@ -48,17 +48,22 @@ import { createPaymentRecorder } from '../server/recordPayment.js';
 //     has been observed both timing out past 20s and returning a spurious 404
 //     after the row was in fact written) — it gets the largest share because
 //     losing this write is the one outcome we must avoid.
-//   - InvoiceView sync: 5s. This is best-effort and follows Apps Script's
-//     redirecting web-app response path, while remaining bounded so it cannot
-//     consume the route's entire budget after the payment row is confirmed.
-//   - The remaining ~3s covers upload (already happened before either timeout
+//   - InvoiceView sync: 15s. Best-effort, but NOT a token budget: at 5s this
+//     silently lost roughly half of all syncs. The endpoint was measured at
+//     4.0-5.0s across repeated live calls, so a 5s ceiling sat right on the
+//     median and every timeout left InvoicesView stale while the customer saw
+//     a successful payment. The Apps Script side has since dropped its
+//     whole-sheet OrdersView rebuild (see InvoiceViewSync.js), which should
+//     bring this well under 2s — 15s is headroom for the tail, not the
+//     expected cost, and it still cannot consume the route's whole budget.
+//   - The remainder covers upload (already happened before either timeout
 //     starts) plus JSON/formatting overhead. Firebase upload of a <=1MB image
 //     is not timeout-bounded here because uploadSlip() doesn't accept one; in
 //     practice it resolves in well under a second for this payload size.
 // ---------------------------------------------------------------------------
 const VERIFY_TIMEOUT_MS = 7_000;
 const RECORD_TIMEOUT_MS = 15_000;
-const INVOICE_VIEW_SYNC_TIMEOUT_MS = 5_000;
+const INVOICE_VIEW_SYNC_TIMEOUT_MS = 15_000;
 
 const RECORD_CREATED_BY = 'liff-verify-slip';
 
