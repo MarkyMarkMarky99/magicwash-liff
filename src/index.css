@@ -55,6 +55,8 @@ html, body {
 }
 
 /* Override Google Fonts unlayered font-size: 24px */
+.material-symbols-outlined.text-\[9px\] { font-size: 9px; }
+.material-symbols-outlined.text-\[12px\] { font-size: 12px; }
 .material-symbols-outlined.text-\[14px\] { font-size: 14px; }
 .material-symbols-outlined.text-\[16px\] { font-size: 16px; }
 .material-symbols-outlined.text-\[18px\] { font-size: 18px; }

@@ -11,6 +11,22 @@ function transformOrder(row) {
   return { ...row, invoiceNumber, items };
 }
 
+export function mergeOrdersWithInvoices(orders, invoices) {
+  if (!invoices.length) return orders;
+  const byInvoiceNumber = new Map(invoices.map((inv) => [inv.invoiceNumber, inv]));
+  return orders.map((order) => {
+    if (!order.invoiceNumber) return order;
+    const invoice = byInvoiceNumber.get(order.invoiceNumber);
+    if (!invoice) return order;
+    return {
+      ...order,
+      paymentStatus: invoice.status,
+      balanceDue: invoice.balanceDue,
+      grandTotal: invoice.grandTotal,
+    };
+  });
+}
+
 function preWarm(orders) {
   orders.forEach((order) => lsSet(cacheKey('ordersView', order.orderId), [order]));
   return orders;

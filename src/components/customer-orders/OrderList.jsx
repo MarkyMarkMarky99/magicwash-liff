@@ -3,7 +3,7 @@ import SectionCard from '../ui/SectionCard';
 import OrderCard from './OrderCard';
 import WaitingPickupCard from './WaitingPickupCard';
 
-export default function OrderList({ orders, waitingPickups = [], onViewPhotos, onSelectOrder, onViewInvoice, onRefresh, refreshing = false }) {
+export default function OrderList({ orders, waitingPickups = [], onViewPhotos, onSelectOrder, onViewInvoice, onPayNow, onRefresh, refreshing = false }) {
   const { t } = useTranslation();
   const isEmpty = orders.length === 0 && waitingPickups.length === 0;
 
@@ -43,6 +43,7 @@ export default function OrderList({ orders, waitingPickups = [], onViewPhotos, o
               onViewPhotos={onViewPhotos}
               onSelectOrder={onSelectOrder}
               onViewInvoice={onViewInvoice}
+              onPayNow={onPayNow}
             />
           ))}
         </div>

@@ -1,4 +1,5 @@
 import { cacheKey, gvizSwrFetch, gvizUrl, lsClear, lsSet } from './localCache';
+import { toNumber } from './numberUtils';
 
 const INVOICE_VIEW_COLS = 'invoiceNumber,status,billingType,billingPeriodStart,billingPeriodEnd,issuedDate,dueDate,customerId,customerJson,itemsJson,adjustmentsJson,paymentsJson,subtotal,adjustmentTotal,grandTotal,paidAmount,balanceDue';
 
@@ -56,6 +57,30 @@ export async function getInvoiceByNumber(invoiceNumber, onRevalidate) {
   return rows[0] ?? null;
 }
 
+const INVOICE_SUMMARY_COLS = 'invoiceNumber,status,customerId,grandTotal,balanceDue';
+
+function transformInvoiceSummary(row) {
+  return {
+    invoiceNumber: row.invoiceNumber,
+    status: row.status,
+    customerId: row.customerId,
+    grandTotal: toNumber(row.grandTotal),
+    balanceDue: toNumber(row.balanceDue),
+  };
+}
+
+export async function getInvoicesByCustomerId(customerId, onRevalidate) {
+  return gvizSwrFetch(
+    'invoiceView',
+    { filterField: 'customerId', filterValue: customerId },
+    customerId,
+    transformInvoiceSummary,
+    onRevalidate ? (rows) => onRevalidate(rows) : null,
+    INVOICE_SUMMARY_COLS,
+    'invoiceViewByCustomer',
+  );
+}
+
 export async function getInvoiceByNumberFresh(invoiceNumber, { signal } = {}) {
   const normalizedInvoiceNumber = normalizeInvoiceNumber(invoiceNumber);
   const key = cacheKey('invoiceView', normalizedInvoiceNumber);
@@ -85,8 +110,28 @@ export async function syncInvoiceView(invoiceNumber, { signal } = {}) {
     body: JSON.stringify({ invoiceNumber: normalizedInvoiceNumber }),
     signal,
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  let result = null;
+  try {
+    result = await res.json();
+  } catch {
+    // The HTTP status below remains useful without a response body.
+  }
 
-  const result = await res.json();
-  if (result?.ok !== true) throw new Error('[gvizApi] Invoice sync failed');
+  if (!res.ok || result?.ok !== true) {
+    const error = new Error('[gvizApi] Invoice sync failed');
+    error.name = 'InvoiceSyncError';
+    error.status = res.status;
+
+    const diagnostic = result?.diagnostic;
+    if (diagnostic && typeof diagnostic === 'object') {
+      if (typeof diagnostic.reason === 'string' && /^[a-z_]+$/.test(diagnostic.reason)) {
+        error.reason = diagnostic.reason;
+      }
+      if (Number.isInteger(diagnostic.status) && diagnostic.status >= 100 && diagnostic.status <= 599) {
+        error.upstreamStatus = diagnostic.status;
+      }
+    }
+
+    throw error;
+  }
 }

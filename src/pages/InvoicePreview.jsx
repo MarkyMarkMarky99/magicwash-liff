@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useRef, useCallback, useId } from 'rea
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
+import { toNumber } from '../api/numberUtils';
 import {
   getInvoiceByNumber,
   getInvoiceByNumberFresh,
@@ -45,6 +46,21 @@ const METHOD_ICONS = {
 
 const OUTSTANDING_INVOICE_STATUSES = new Set(['UNPAID', 'PARTIALLY_PAID', 'OVERDUE']);
 
+function shouldShowDevelopmentSyncDiagnostic() {
+  if (import.meta.env.DEV) return true;
+  if (typeof window === 'undefined') return false;
+  return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+}
+
+function getSyncDiagnostic(error) {
+  const reason = typeof error?.reason === 'string' && /^[a-z_]+$/.test(error.reason)
+    ? error.reason
+    : 'unknown';
+  const status = Number.isInteger(error?.upstreamStatus) ? error.upstreamStatus : null;
+  const requestStatus = Number.isInteger(error?.status) ? error.status : null;
+  return { reason, status, requestStatus };
+}
+
 /* ── Defensive parsing ──
    Rows arrive raw from the sheet: nested documents are JSON strings that may be
    empty, malformed, or already decoded by an upstream layer. Never throw. */
@@ -67,12 +83,6 @@ function parseObject(raw) {
 function parseArray(raw) {
   const v = parseJson(raw);
   return Array.isArray(v) ? v : [];
-}
-
-function toNumber(v) {
-  if (v == null || v === '') return null;
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n : null;
 }
 
 function toText(v) {
@@ -385,6 +395,7 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   const [row, setRow] = useState(mockRow);
   const [status, setStatus] = useState(mockRow ? 'done' : requestedInvoiceNumber ? 'loading' : 'notFound');
   const [retryCount, setRetryCount] = useState(0);
+  const [syncDiagnostic, setSyncDiagnostic] = useState(null);
   const [proofUrl, setProofUrl] = useState(null); // open slip lightbox, or null
   const [payOpen, setPayOpen] = useState(false);  // QR payment popup
 
@@ -436,23 +447,36 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
           return;
         }
 
+        setRow(fresh);
+        setStatus('done');
+
         const invoice = readInvoice(fresh);
         const hasOutstandingBalance = (invoice?.balanceDue ?? 0) > 0;
         const hasOutstandingStatus = OUTSTANDING_INVOICE_STATUSES.has(invoice?.status);
+        if (!hasOutstandingBalance && !hasOutstandingStatus) return;
 
-        let finalRow = fresh;
-        if (hasOutstandingBalance || hasOutstandingStatus) {
-          await syncInvoiceView(requestedInvoiceNumber, { signal: controller.signal });
-          if (!active) return;
-          finalRow = await getInvoiceByNumberFresh(requestedInvoiceNumber, {
-            signal: controller.signal,
-          });
-          if (!active) return;
-          if (!finalRow) throw new Error('Invoice disappeared after sync');
-        }
+        void (async () => {
+          try {
+            await syncInvoiceView(requestedInvoiceNumber, { signal: controller.signal });
+          } catch (error) {
+            if (!active || error?.name === 'AbortError') return;
+            if (shouldShowDevelopmentSyncDiagnostic()) {
+              setSyncDiagnostic({ invoiceNumber: requestedInvoiceNumber, ...getSyncDiagnostic(error) });
+            }
+            return;
+          }
 
-        setRow(finalRow);
-        setStatus('done');
+          if (!active) return;
+          try {
+            const refreshed = await getInvoiceByNumberFresh(requestedInvoiceNumber, {
+              signal: controller.signal,
+            });
+            if (active && refreshed) setRow(refreshed);
+          } catch (error) {
+            // A failed refresh must preserve the already-rendered invoice.
+            if (!active || error?.name === 'AbortError') return;
+          }
+        })();
       } catch (error) {
         if (!active || error?.name === 'AbortError') return;
         setRow(null);
@@ -777,6 +801,34 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
             referrerPolicy="no-referrer"
             className="max-h-[80vh] max-w-full w-auto object-contain rounded-xl shadow-2xl"
           />
+        </Lightbox>
+      )}
+
+      {shouldShowDevelopmentSyncDiagnostic() && syncDiagnostic?.invoiceNumber === requestedInvoiceNumber && (
+        <Lightbox label={t('invoice.syncDiagnostic.title')} onClose={() => setSyncDiagnostic(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-error text-2xl" aria-hidden="true">sync_problem</span>
+              <div className="min-w-0">
+                <h2 className="font-headline text-lg font-bold text-on-surface">{t('invoice.syncDiagnostic.title')}</h2>
+                <p className="mt-2 font-body text-sm leading-relaxed text-on-surface-variant">
+                  {t('invoice.syncDiagnostic.message')}
+                </p>
+              </div>
+            </div>
+            <dl className="mt-5 space-y-2 rounded-xl bg-surface-container px-4 py-3 font-body text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-on-surface-variant">{t('invoice.syncDiagnostic.reason')}</dt>
+                <dd className="text-right font-medium text-on-surface">{syncDiagnostic.reason}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-on-surface-variant">{t('invoice.syncDiagnostic.serverStatus')}</dt>
+                <dd className="text-right font-medium text-on-surface">
+                  {syncDiagnostic.status ?? syncDiagnostic.requestStatus ?? t('invoice.syncDiagnostic.notAvailable')}
+                </dd>
+              </div>
+            </dl>
+          </div>
         </Lightbox>
       )}
 

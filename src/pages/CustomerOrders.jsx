@@ -1,7 +1,8 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCustomerById } from '../api/customerApi';
-import { getOrdersByCustomerId } from '../api/orderApi';
+import { getOrdersByCustomerId, mergeOrdersWithInvoices } from '../api/orderApi';
+import { getInvoicesByCustomerId } from '../api/gvizApi';
 import { getWaitingPickups, clearAppointmentsCache } from '../api/appointmentApi';
 import { lsClear, cacheKey } from '../api/localCache';
 import { HeaderContext } from '../App';
@@ -15,7 +16,9 @@ import InvoicePreview from './InvoicePreview';
 
 export default function CustomerOrders({ custId }) {
   const [customer, setCustomer]               = useState(null);
-  const [orders, setOrders]                   = useState([]);
+  const [rawOrders, setRawOrders]              = useState([]);
+  const [invoices, setInvoices]                = useState([]);
+  const orders = useMemo(() => mergeOrdersWithInvoices(rawOrders, invoices), [rawOrders, invoices]);
   const [status, setStatus]                   = useState('loading');
   const [refreshing, setRefreshing]           = useState(false);
   const [galleryOrderId, setGalleryOrderId]   = useState(null);
@@ -37,22 +40,30 @@ export default function CustomerOrders({ custId }) {
       .catch(() => { /* display-only, ignore */ });
   }, [custId]);
 
+  const loadInvoices = useCallback((id = custId) => {
+    if (!id) return;
+    getInvoicesByCustomerId(id, (fresh) => setInvoices(fresh))
+      .then((res) => setInvoices(res))
+      .catch(() => { /* enrichment-only, ignore */ });
+  }, [custId]);
+
   useEffect(() => {
     if (!custId) { setStatus('error'); return; }
 
     Promise.all([
       getCustomerById(custId,       (fresh) => { if (fresh) setCustomer(fresh); }),
-      getOrdersByCustomerId(custId, (fresh) => setOrders(fresh)),
+      getOrdersByCustomerId(custId, (fresh) => setRawOrders(fresh)),
     ])
       .then(([customerRes, ordersRes]) => {
         if (customerRes) setCustomer(customerRes);
-        setOrders(ordersRes);
+        setRawOrders(ordersRes);
         setStatus(customerRes ? 'done' : 'error');
       })
       .catch(() => setStatus('error'));
 
     loadWaitingPickups(custId);
-  }, [custId, loadWaitingPickups]);
+    loadInvoices(custId);
+  }, [custId, loadWaitingPickups, loadInvoices]);
 
   useEffect(() => {
     if (invoicePreview) return;
@@ -72,15 +83,18 @@ export default function CustomerOrders({ custId }) {
     if (!custId || refreshing) return;
     lsClear(cacheKey('customer', custId));
     lsClear(cacheKey('ordersViewV3', custId));
+    lsClear(cacheKey('invoiceViewByCustomer', custId));
     clearAppointmentsCache(custId);
     setRefreshing(true);
     try {
-      const [customerRes, ordersRes] = await Promise.all([
+      const [customerRes, ordersRes, invoicesRes] = await Promise.all([
         getCustomerById(custId),
         getOrdersByCustomerId(custId),
+        getInvoicesByCustomerId(custId),
       ]);
       if (customerRes) setCustomer(customerRes);
-      setOrders(ordersRes);
+      setRawOrders(ordersRes);
+      setInvoices(invoicesRes);
       loadWaitingPickups(custId);
       setStatus('done');
     } catch { /* silently fail */ }
@@ -192,6 +206,7 @@ export default function CustomerOrders({ custId }) {
                     onViewPhotos={setGalleryOrderId}
                     onSelectOrder={handleSelectOrder}
                     onViewInvoice={handleShowInvoiceFromList}
+                    onPayNow={handleShowInvoiceFromList}
                     onRefresh={handleRefresh}
                     refreshing={refreshing}
                   />
