@@ -35,7 +35,8 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
   const dateLocale = getDateLocale(i18n.language);
   const hasInvoice = Boolean(order.invoiceNumber);
   const showPaymentSection = hasInvoice && Boolean(order.paymentStatus) && order.paymentStatus !== 'PAID';
-  const requiresUrgentPayment = order.paymentStatus === 'OVERDUE';
+  const isOverdue = order.paymentStatus === 'OVERDUE';
+  const hasOutstandingPayment = order.paymentStatus === 'UNPAID' || isOverdue;
   const balanceDue = Number(order.balanceDue ?? 0);
   const cfg = STATUS_CONFIG[order.status] ?? {
     icon: 'receipt_long',
@@ -107,7 +108,7 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
                   {t('customerOrders.balanceOf', { amount: formatBaht(order.grandTotal) })}
                 </span>
               )}
-              <span className={`font-headline font-extrabold text-[13px] truncate ${requiresUrgentPayment ? 'text-error' : 'text-on-surface'}`}>
+              <span className={`font-headline font-extrabold text-[13px] truncate ${hasOutstandingPayment ? 'text-on-error-container' : 'text-on-surface'}`}>
                 {formatBaht(balanceDue > 0 ? balanceDue : (order.grandTotal ?? 0))}
               </span>
             </div>
@@ -115,7 +116,7 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); onPayNow?.(order.invoiceNumber, order.orderId); }}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-headline text-[11px] font-bold hover:opacity-95 active:scale-[0.98] transition-all shrink-0 focus:outline-none focus-visible:ring-2 ${requiresUrgentPayment ? 'bg-error text-on-error focus-visible:ring-error/60' : 'bg-primary text-on-primary focus-visible:ring-primary/60'}`}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-headline text-[11px] font-bold hover:opacity-95 active:scale-[0.98] transition-all shrink-0 focus:outline-none focus-visible:ring-2 ${isOverdue ? 'bg-error text-on-error focus-visible:ring-error/60' : 'bg-primary text-on-primary focus-visible:ring-primary/60'}`}
               >
                 <span className="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">payments</span>
                 {t('invoice.pay.action')}
