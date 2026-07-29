@@ -109,7 +109,17 @@
       "title": "Scan to pay",
       "paidLabel": "Paid in full",
       "pendingLabel": "Payment pending",
-      "pendingNotice": "We're verifying your payment — no need to pay again."
+      "pendingNotice": "We're verifying your payment — no need to pay again.",
+      "closeAria": "Close payment dialog",
+      "scanNotice": "Scan QR to transfer to account",
+      "bankLabel": "Bank",
+      "nameLabel": "Name",
+      "accountLabel": "Account No.",
+      "copyAccount": "Copy account number",
+      "copied": "Copied",
+      "ref1": "Ref 1",
+      "ref2": "Ref 2",
+      "amountLabel": "Total amount"
     },
     "status": {
       "DRAFT": "Draft",
@@ -159,6 +169,33 @@
       "QR_PROMPTPAY": "PromptPay QR",
       "GIFT_VOUCHER": "Gift voucher",
       "OTHER": "Other"
+    },
+    "slip": {
+      "verified": "Payment confirmed. Thank you!",
+      "pending": "Slip received. Our staff will check it and confirm shortly.",
+      "attach": "Attach payment slip",
+      "previewAlt": "Selected payment slip",
+      "send": "Send slip",
+      "sending": "Sending your slip… this can take up to 30 seconds",
+      "verifying": "Verifying…",
+      "clear": "Remove selected slip",
+      "resultTitle": {
+        "verified": "Payment confirmed",
+        "pending": "Slip received",
+        "failed": "Couldn't complete"
+      },
+      "error": {
+        "badRequest": "We couldn't read that file. Please attach the slip again.",
+        "methodNotAllowed": "Something went wrong. Please try again.",
+        "unsupportedType": "That file isn't a supported image. Please attach a JPG, PNG, or WebP.",
+        "fileTooLarge": "That image is too large. Please attach a smaller one.",
+        "uploadFailed": "We couldn't upload your slip. Please try again in a moment.",
+        "recordFailed": "We couldn't save your payment. Please contact our staff directly with your slip — do not transfer again.",
+        "duplicate": "This slip has already been submitted. Please contact our staff if you think this is a mistake.",
+        "receiverMismatch": "This transfer went to a different account. Please contact our staff with your slip.",
+        "amountMismatch": "The amount on this slip doesn't match. Our staff will check it for you.",
+        "internal": "Something went wrong on our side. Please try again in a moment."
+      }
     }
   },
   "activeOrder": {

@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+magicwashlaundry-a50ca-firebase-adminsdk-fbsvc-abb1067772.json
 
 # Editor directories and files
 .vscode/*

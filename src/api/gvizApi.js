@@ -1,4 +1,4 @@
-import { gvizSwrFetch } from './localCache';
+import { cacheKey, gvizSwrFetch, lsClear } from './localCache';
 
 const INVOICE_VIEW_COLS = 'invoiceNumber,status,billingType,billingPeriodStart,billingPeriodEnd,issuedDate,dueDate,customerId,customerJson,itemsJson,adjustmentsJson,paymentsJson,subtotal,adjustmentTotal,grandTotal,paidAmount,balanceDue';
 
@@ -35,6 +35,11 @@ function normalizeInvoiceNumber(invoiceNumber) {
     throw new Error('[gvizApi] Invalid invoice number');
   }
   return invoiceNumber.trim();
+}
+
+export function invalidateInvoiceCache(invoiceNumber) {
+  const normalizedInvoiceNumber = normalizeInvoiceNumber(invoiceNumber);
+  lsClear(cacheKey('invoiceView', normalizedInvoiceNumber));
 }
 
 export async function getInvoiceByNumber(invoiceNumber, onRevalidate) {

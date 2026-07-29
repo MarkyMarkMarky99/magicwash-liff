@@ -2,13 +2,15 @@ import { useState, useEffect, useContext, useRef, useCallback, useId } from 'rea
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
-import { getInvoiceByNumber } from '../api/gvizApi';
+import { getInvoiceByNumber, invalidateInvoiceCache } from '../api/gvizApi';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
 import PageActionFooter from '../components/ui/PageActionFooter';
 import SectionCard, { BADGE_PILL } from '../components/ui/SectionCard';
-import qrPaymentImage from '../assets/IMG_8640.webp';
+import PaymentPopup from '../components/invoice/PaymentPopup';
+import { preprocessSlipImage, submitSlip } from '../services/slipUpload';
+import qrPaymentImage from '../assets/IMG_8667.webp';
 
 const STATUS_STYLES = {
   DRAFT:          { badge: 'bg-gray-100 text-gray-600',                icon: 'draft' },
@@ -355,6 +357,13 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   const [proofUrl, setProofUrl] = useState(null); // open slip lightbox, or null
   const [payOpen, setPayOpen] = useState(false);  // QR payment popup
 
+  // "Attach a payment slip" orchestration — lives here, not in the view
+  // component. stage drives what SlipUpload renders inside the QR popup.
+  const [slipStage, setSlipStage] = useState('idle'); // idle | preview | sending | result
+  const [slipPreviewUrl, setSlipPreviewUrl] = useState(null);
+  const [slipPayload, setSlipPayload] = useState(null); // { base64, filename, contentType }, ready to submit
+  const [slipResult, setSlipResult] = useState(null);   // normalized SlipOutcome from submitSlip()
+
   useEffect(() => {
     if (!setOnBack) return undefined;
     setOnBack(() => onBack);
@@ -393,10 +402,38 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   }, [mockRow, requestedInvoiceNumber, retryCount]);
 
   const closeProof = useCallback(() => setProofUrl(null), []);
-  const closePay = useCallback(() => setPayOpen(false), []);
+
+  const resetSlip = useCallback(() => {
+    setSlipStage('idle');
+    setSlipPreviewUrl(null);
+    setSlipPayload(null);
+    setSlipResult(null);
+  }, []);
+
+  // Gates every dismiss path the QR popup has (backdrop click, Escape, the
+  // X button — Lightbox routes all three through this one onClose prop).
+  // There's no server-side idempotency for a slip submission: closing the
+  // popup mid-flight wouldn't cancel the request, it would just orphan the
+  // UI and invite the customer to reopen and resubmit, creating a second
+  // payment row an admin has to clean up by hand.
+  const closePay = useCallback(() => {
+    if (slipStage === 'sending') return;
+    setPayOpen(false);
+    resetSlip();
+  }, [slipStage, resetSlip]);
+
+  const handleSlipPick = useCallback(async (file) => {
+    const processed = await preprocessSlipImage(file);
+    setSlipPayload(processed);
+    setSlipPreviewUrl(`data:${processed.contentType};base64,${processed.base64}`);
+    setSlipResult(null);
+    setSlipStage('preview');
+  }, []);
+
   const handleRetry = useCallback(() => {
     setProofUrl(null);
     setPayOpen(false);
+    resetSlip();
     if (mockRow) {
       setRow(mockRow);
       setStatus('done');
@@ -405,7 +442,7 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
     setRow(null);
     setStatus('loading');
     setRetryCount((count) => count + 1);
-  }, [mockRow]);
+  }, [mockRow, resetSlip]);
 
   const dateLocale = getDateLocale(i18n.language);
   const invoice = readInvoice(row);
@@ -466,6 +503,31 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   // of a fresh "Pay now" ask for money that's already on its way.
   const canPay = collectable && remainingDue > 0;
   const awaitingVerification = collectable && !canPay && balanceDue > 0 && pendingAmount > 0;
+
+  // Not memoized: `invoice`/`remainingDue` only exist past the early returns
+  // above, so this can't be a useCallback (that would call a hook
+  // conditionally). It only ever runs from a click inside the QR popup.
+  const handleSlipSend = async () => {
+    if (!slipPayload) return;
+    setSlipStage('sending');
+    const outcome = await submitSlip({
+      invoiceNumber: invoice.invoiceNumber,
+      balanceDue: remainingDue,
+      ...slipPayload,
+    });
+    setSlipResult(outcome);
+    setSlipStage('result');
+
+    if (outcome.invoiceViewSynced === true && !mockRow) {
+      try {
+        invalidateInvoiceCache(invoice.invoiceNumber);
+        const fresh = await getInvoiceByNumber(invoice.invoiceNumber);
+        if (fresh) setRow(fresh);
+      } catch {
+        // The payment result is already final; a refresh failure is harmless.
+      }
+    }
+  };
 
   // Footer content is derived once so every visible state shares one fixed-height
   // bar. Draft intentionally has no footer. Other invoice statuses are surfaced
@@ -627,33 +689,21 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
         </Lightbox>
       )}
 
-      {payOpen && (
-        <Lightbox label={t('invoice.pay.title')} onClose={closePay}>
-          {/* Content order is deliberate: QR first, then what/why it's for, then
-              any guidance — so the QR is never buried under text on a small screen. */}
-          <div className="w-[280px] max-w-full max-h-[80vh] overflow-y-auto no-scrollbar bg-surface-container-lowest rounded-2xl shadow-2xl p-5 flex flex-col items-center text-center">
-            <img
-              src={qrPaymentImage}
-              alt={t('invoice.pay.title')}
-              className="w-full rounded-xl"
-            />
-            <p className="font-headline font-bold text-[22px] text-on-surface leading-tight mt-4">
-              {formatMoney(awaitingVerification ? pendingAmount : remainingDue, currency)}
-            </p>
-            <p className="font-body text-[12px] text-on-surface-variant mt-0.5">
-              {t('invoice.pay.title')}
-            </p>
-            {awaitingVerification && (
-              <div className="w-full mt-3 pt-3 border-t border-outline-variant/25 flex items-start gap-2 text-left">
-                <span className="material-symbols-outlined text-amber-600 text-[16px] leading-none mt-0.5" aria-hidden="true">hourglass_top</span>
-                <p className="font-body text-[11px] text-amber-700 leading-relaxed">
-                  {t('invoice.pay.pendingNotice')}
-                </p>
-              </div>
-            )}
-          </div>
-        </Lightbox>
-      )}
+      <PaymentPopup
+        open={payOpen}
+        qrImage={qrPaymentImage}
+        invoiceRef={invoice.invoiceNumber}
+        amountLabel={formatMoney(awaitingVerification ? pendingAmount : remainingDue, currency)}
+        pendingNotice={awaitingVerification ? t('invoice.pay.pendingNotice') : null}
+        canSubmit={canPay}
+        stage={slipStage}
+        previewUrl={slipPreviewUrl}
+        result={slipResult}
+        onPick={handleSlipPick}
+        onReset={resetSlip}
+        onSend={handleSlipSend}
+        onClose={closePay}
+      />
     </div>
   );
 }
