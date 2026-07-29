@@ -150,6 +150,30 @@ function readInvoice(row) {
   };
 }
 
+function applyVerifiedPaymentToRow(row, invoice, outcome) {
+  const amount = toNumber(outcome?.amount);
+  if (!row || !invoice || amount == null || amount <= 0) return row;
+
+  const currentPaidAmount = invoice.paidAmount ?? 0;
+  const currentBalanceDue = invoice.balanceDue ?? invoice.grandTotal - currentPaidAmount;
+  const paidAmount = currentPaidAmount + amount;
+  const balanceDue = Math.max(0, currentBalanceDue - amount);
+  const payment = {
+    amount,
+    method: 'BANK_TRANSFER',
+    status: 'VERIFIED',
+    paidAt: outcome.paidAt ?? null,
+  };
+
+  return {
+    ...row,
+    paidAmount,
+    balanceDue,
+    status: balanceDue > 0 ? 'PARTIALLY_PAID' : 'PAID',
+    paymentsJson: JSON.stringify([...invoice.payments, payment]),
+  };
+}
+
 /**
  * The payment count badge, upgraded to a dropdown trigger.
  *
@@ -518,13 +542,19 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
     setSlipResult(outcome);
     setSlipStage('result');
 
-    if (outcome.invoiceViewSynced === true && !mockRow) {
-      try {
-        invalidateInvoiceCache(invoice.invoiceNumber);
-        const fresh = await getInvoiceByNumber(invoice.invoiceNumber);
-        if (fresh) setRow(fresh);
-      } catch {
-        // The payment result is already final; a refresh failure is harmless.
+    if (outcome.tone === 'success') {
+      setRow((currentRow) => applyVerifiedPaymentToRow(currentRow, readInvoice(currentRow), outcome));
+    }
+
+    if (outcome.tone === 'success' && !mockRow) {
+      invalidateInvoiceCache(invoice.invoiceNumber);
+      if (outcome.invoiceViewSynced === true) {
+        try {
+          const fresh = await getInvoiceByNumber(invoice.invoiceNumber);
+          if (fresh) setRow(fresh);
+        } catch {
+          // The payment result is already final; a refresh failure is harmless.
+        }
       }
     }
   };
