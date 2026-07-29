@@ -135,15 +135,7 @@ export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onVie
         {status === 'done' && order && (
           <div className="px-4 pt-3 pb-2 flex-none">
             <div className="space-y-2">
-              {order.status === 'COMPLETED' ? (
-                <div
-                  aria-disabled="true"
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-container text-on-surface-variant font-label text-[12px] font-semibold cursor-not-allowed"
-                >
-                  <span className="material-symbols-outlined text-[16px] leading-none">task_alt</span>
-                  {t('activeOrder.delivery.completed')}
-                </div>
-              ) : (
+              {order.status !== 'COMPLETED' && (
                 <button
                   onClick={() => onScheduleDelivery?.(orderId)}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all"
@@ -152,26 +144,16 @@ export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onVie
                   {t('activeOrder.delivery.schedule')}
                 </button>
               )}
-              <div className="flex gap-2">
-                {hasInvoice && (
-                  <button
-                    type="button"
-                    onClick={() => onViewInvoice?.(order.invoiceNumber, orderId)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary text-primary hover:bg-primary/5 active:scale-[0.98] font-label text-[12px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                  >
-                    <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">receipt_long</span>
-                    {t('customerOrders.viewInvoice')}
-                  </button>
-                )}
+              {hasInvoice && (
                 <button
                   type="button"
-                  onClick={() => onViewPhotos?.(orderId)}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] font-label text-[12px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  onClick={() => onViewInvoice?.(order.invoiceNumber, orderId)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-primary text-primary hover:bg-primary/5 active:scale-[0.98] font-label text-[12px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
-                  <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">photo_library</span>
-                  {t('customerOrders.viewPhotos')}
+                  <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">receipt_long</span>
+                  {t('customerOrders.viewInvoice')}
                 </button>
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -202,17 +184,29 @@ export default function OrderDetailSheet({ orderId, onClose, onViewPhotos, onVie
                   icon="checkroom"
                   title={t('activeOrder.items.title')}
                   badge={`${order.quantity || 0} ${t('activeOrder.pieces')}`}
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => onViewPhotos?.(orderId)}
+                      aria-label={t('customerOrders.viewPhotos')}
+                      className="h-[22px] w-[22px] flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                    >
+                      <span className="material-symbols-outlined text-primary text-[16px]" aria-hidden="true">photo_library</span>
+                    </button>
+                  }
                 >
                   <ul className="divide-y divide-outline-variant/10">
                     {order.items.map((item) => (
-                      <li key={item.id} className="px-4 py-3 flex items-center gap-3">
+                      <li key={item.id} className="px-4 py-3 flex items-start gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="font-body text-sm text-on-surface font-medium leading-tight truncate">
+                          <p className="font-body text-sm text-on-surface font-medium leading-snug">
                             {item.description || '—'}
+                            {item.service_type && (
+                              <span className="inline-flex items-center align-middle ml-1.5 px-2 py-px rounded-full bg-surface-container font-label text-[9px] font-bold text-on-surface-variant">
+                                {t(`activeOrder.serviceTypes.${item.service_type}`, { defaultValue: item.service_type })}
+                              </span>
+                            )}
                           </p>
-                          {item.service_type && (
-                            <p className="font-body text-[11px] text-on-surface-variant mt-0.5">{item.service_type}</p>
-                          )}
                         </div>
                         <span className="font-label text-[11px] font-semibold text-on-surface-variant shrink-0">
                           {item.quantity} {t('activeOrder.pieces')}

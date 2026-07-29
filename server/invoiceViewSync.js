@@ -9,35 +9,36 @@ function logInvoiceViewSyncFailure(logPrefix, reason, status) {
   }
 }
 
+function syncFailure(logPrefix, reason, status) {
+  logInvoiceViewSyncFailure(logPrefix, reason, status);
+  return status === undefined ? { ok: false, reason } : { ok: false, reason, status };
+}
+
 /**
  * Refresh the invoice read model through the configured Apps Script endpoint.
  *
- * Returns false for every failure mode so callers can decide whether the sync
- * is best-effort (payment recording) or required (pre-display refresh).
+ * Returns a safe result code for every failure mode. It deliberately never
+ * includes an upstream response body or error message.
  */
-export async function syncInvoiceView(invoiceNumber, { logPrefix = 'invoice-view-sync' } = {}) {
+export async function getInvoiceViewSyncResult(invoiceNumber, { logPrefix = 'invoice-view-sync' } = {}) {
   try {
     const configuredUrl = process.env.APPSCRIPT_INVOICE_VIEW_SYNC_URL;
     if (typeof configuredUrl !== 'string' || configuredUrl.trim().length === 0) {
-      logInvoiceViewSyncFailure(logPrefix, 'missing_config');
-      return false;
+      return syncFailure(logPrefix, 'missing_config');
     }
 
     let endpointUrl;
     try {
       endpointUrl = new URL(configuredUrl);
     } catch {
-      logInvoiceViewSyncFailure(logPrefix, 'invalid_config');
-      return false;
+      return syncFailure(logPrefix, 'invalid_config');
     }
     if (endpointUrl.protocol !== 'http:' && endpointUrl.protocol !== 'https:') {
-      logInvoiceViewSyncFailure(logPrefix, 'invalid_config');
-      return false;
+      return syncFailure(logPrefix, 'invalid_config');
     }
 
     if (typeof globalThis.fetch !== 'function' || typeof globalThis.AbortController !== 'function') {
-      logInvoiceViewSyncFailure(logPrefix, 'runtime_unavailable');
-      return false;
+      return syncFailure(logPrefix, 'runtime_unavailable');
     }
 
     const controller = new globalThis.AbortController();
@@ -73,11 +74,11 @@ export async function syncInvoiceView(invoiceNumber, { logPrefix = 'invoice-view
             return { kind: 'invalid_response' };
           }
           if (typeof response.json !== 'function') {
-            return { kind: 'invalid_response' };
+            return { kind: 'invalid_response', status };
           }
           body = await response.json();
         } catch {
-          return { kind: 'invalid_response' };
+          return { kind: 'invalid_response', status };
         }
         return { kind: 'response', status, ok, body };
       })
@@ -91,16 +92,13 @@ export async function syncInvoiceView(invoiceNumber, { logPrefix = 'invoice-view
     }
 
     if (result.kind === 'timeout') {
-      logInvoiceViewSyncFailure(logPrefix, 'timeout');
-      return false;
+      return syncFailure(logPrefix, 'timeout');
     }
     if (result.kind === 'network_failure') {
-      logInvoiceViewSyncFailure(logPrefix, 'network_failure');
-      return false;
+      return syncFailure(logPrefix, 'network_failure');
     }
     if (result.kind === 'invalid_response') {
-      logInvoiceViewSyncFailure(logPrefix, 'invalid_response');
-      return false;
+      return syncFailure(logPrefix, 'invalid_response', result.status);
     }
 
     let bodyAccepted = false;
@@ -110,16 +108,21 @@ export async function syncInvoiceView(invoiceNumber, { logPrefix = 'invoice-view
       bodyAccepted = false;
     }
     if (!result.ok) {
-      logInvoiceViewSyncFailure(logPrefix, 'rejected_http', result.status);
-      return false;
+      return syncFailure(logPrefix, 'rejected_http', result.status);
     }
     if (!bodyAccepted) {
-      logInvoiceViewSyncFailure(logPrefix, 'rejected_body', result.status);
-      return false;
+      return syncFailure(logPrefix, 'rejected_body', result.status);
     }
-    return true;
+    return { ok: true };
   } catch {
-    logInvoiceViewSyncFailure(logPrefix, 'unexpected_failure');
-    return false;
+    return syncFailure(logPrefix, 'unexpected_failure');
   }
+}
+
+/**
+ * Compatibility wrapper for callers where syncing remains best-effort.
+ */
+export async function syncInvoiceView(invoiceNumber, options) {
+  const result = await getInvoiceViewSyncResult(invoiceNumber, options);
+  return result.ok;
 }

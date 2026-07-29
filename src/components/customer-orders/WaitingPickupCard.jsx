@@ -11,16 +11,14 @@ export default function WaitingPickupCard({ appointment }) {
   const dateLocale = getDateLocale(i18n.language);
 
   return (
-    <div className="px-4 py-3 flex gap-3">
-      {/* Avatar */}
-      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-outline-variant/10 bg-amber-50 text-amber-600">
-        <span className="material-symbols-outlined fill-icon text-[20px]">local_shipping</span>
-      </div>
-
+    <div className="px-4 py-3">
       {/* Content */}
-      <div className="flex-grow min-w-0 flex flex-col justify-center">
+      <div className="min-w-0 flex flex-col justify-center">
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <div className="flex items-center gap-1.5 min-w-0">
+            <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 bg-amber-50 text-amber-600">
+              <span className="material-symbols-outlined fill-icon text-[12px]" aria-hidden="true">local_shipping</span>
+            </div>
             <h3 className="font-headline font-bold text-primary text-[14px] leading-tight truncate">
               {formatDisplayDate(appointment.appointmentDate, { day: '2-digit', month: 'short', year: 'numeric' }, dateLocale)}
             </h3>

@@ -1,6 +1,13 @@
-import { syncInvoiceView } from '../server/invoiceViewSync.js';
+import { getInvoiceViewSyncResult } from '../server/invoiceViewSync.js';
 
 const INVOICE_NUMBER_RE = /^INV\d{12}$/;
+
+function syncDiagnostic(result) {
+  return {
+    reason: result.reason,
+    ...(Number.isInteger(result.status) ? { status: result.status } : {}),
+  };
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -24,9 +31,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'BAD_REQUEST' });
   }
 
-  const synced = await syncInvoiceView(invoiceNumber, { logPrefix: 'sync-invoice-view' });
-  if (!synced) {
-    return res.status(502).json({ ok: false, error: 'SYNC_FAILED' });
+  const syncResult = await getInvoiceViewSyncResult(invoiceNumber, { logPrefix: 'sync-invoice-view' });
+  if (!syncResult.ok) {
+    const diagnostic = syncDiagnostic(syncResult);
+    return res.status(502).json({
+      ok: false,
+      error: 'SYNC_FAILED',
+      // These are normalized local codes and a numeric status only. Upstream
+      // response bodies and error messages never leave the server.
+      diagnostic,
+    });
   }
 
   return res.status(200).json({ ok: true, invoiceNumber });

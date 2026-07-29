@@ -90,7 +90,8 @@
     "orderHistory": "Order History",
     "ordersCount": "{{count}} ORDERS",
     "refresh": "Refresh orders",
-    "empty": "No orders yet"
+    "empty": "No orders yet",
+    "balanceOf": "Balance of {{amount}}"
   },
   "invoice": {
     "pageTitle": "Invoice",
@@ -104,6 +105,13 @@
     "loadError": "Failed to load invoice",
     "retry": "Try again",
     "close": "Close",
+    "syncDiagnostic": {
+      "title": "Invoice refresh diagnostic",
+      "message": "The latest invoice sync did not complete. The invoice on screen is the first successful read and remains available.",
+      "reason": "Cause",
+      "serverStatus": "Server status",
+      "notAvailable": "Not supplied"
+    },
     "pay": {
       "action": "Pay now",
       "title": "Scan to pay",
@@ -205,6 +213,12 @@
     "receivedDate": "Picked up",
     "dueDate": "Due Date",
     "serviceType": "Service",
+    "serviceTypes": {
+      "WASH": "Wash & Fold",
+      "WSIR": "Wash & Iron",
+      "DRCL": "Dry Clean",
+      "IRON": "Iron"
+    },
     "tracking": {
       "pickup": "Pickup",
       "delivery": "Delivery",

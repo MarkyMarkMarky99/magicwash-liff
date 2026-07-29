@@ -12,13 +12,31 @@ const STATUS_CONFIG = {
   'รับแล้ว':   { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',     avatar: 'bg-teal-50 text-teal-700'    },
 };
 
+// Payment status uses the app's real MD3 text tokens (not the order-status
+// Tailwind palette above) so the two status systems stay visually distinct.
+const PAYMENT_STATUS_TEXT = {
+  'PAID':           'text-primary',
+  'PARTIALLY_PAID': 'text-on-secondary-container',
+  'UNPAID':         'text-on-error-container',
+  'OVERDUE':        'text-on-error-container',
+  'CANCELLED':      'text-on-surface-variant',
+  'VOID':           'text-on-surface-variant',
+};
+
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
 
-export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewInvoice }) {
+function formatBaht(n) {
+  return `฿${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewInvoice, onPayNow }) {
   const { t, i18n } = useTranslation();
   const dateLocale = getDateLocale(i18n.language);
   const hasInvoice = Boolean(order.invoiceNumber);
+  const showPaymentSection = hasInvoice && Boolean(order.paymentStatus) && order.paymentStatus !== 'PAID';
+  const requiresUrgentPayment = order.paymentStatus === 'OVERDUE';
+  const balanceDue = Number(order.balanceDue ?? 0);
   const cfg = STATUS_CONFIG[order.status] ?? {
     icon: 'receipt_long',
     badge: 'bg-gray-100 text-gray-600',
@@ -27,19 +45,17 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
 
   return (
     <div
-      className="px-4 py-3 flex gap-3 cursor-pointer hover:bg-surface-container-low active:bg-surface-container transition-colors"
+      className="px-4 py-3 cursor-pointer hover:bg-surface-container-low active:bg-surface-container transition-colors"
       onClick={() => onSelectOrder?.(order.orderId)}
     >
-      {/* Avatar */}
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-outline-variant/10 ${cfg.avatar}`}>
-        <span className="material-symbols-outlined fill-icon text-[20px]">{cfg.icon}</span>
-      </div>
-
       {/* Content */}
-      <div className="flex-grow min-w-0 flex flex-col justify-center">
-        {/* Row 1: date + badge + quantity */}
-        <div className="flex items-center justify-between gap-2 mb-0.5">
+      <div className="min-w-0 flex flex-col justify-center gap-0.5">
+        {/* Row 1: date + status badge, icon actions */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
+            <div className={`w-3 h-3 rounded-[2px] flex items-center justify-center shrink-0 ${cfg.avatar}`}>
+              <span className="material-symbols-outlined fill-icon text-[9px]" aria-hidden="true">{cfg.icon}</span>
+            </div>
             <h3 className="font-headline font-bold text-primary text-[14px] leading-tight truncate">
               {formatDisplayDate(order.receivedDate, { day: '2-digit', month: 'short', year: 'numeric' }, dateLocale)}
             </h3>
@@ -47,18 +63,8 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
               {order.status}
             </span>
           </div>
-          <span className="font-body text-[11px] font-semibold text-on-surface-variant shrink-0">
-            {order.quantity != null ? `${order.quantity} ${t('activeOrder.pieces')}` : ''}
-          </span>
-        </div>
-
-        {/* Row 2: notes / serviceType + invoice + photo icons */}
-        <div className="flex items-center justify-between gap-2">
-          <p className="font-body text-xs text-on-surface-variant truncate">
-            {order.note || order.serviceType || ''}
-          </p>
           <div
-            className="flex items-center gap-2 shrink-0"
+            className="flex items-center gap-2.5 shrink-0"
             onClick={(event) => event.stopPropagation()}
           >
             {hasInvoice && (
@@ -81,6 +87,42 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
             </button>
           </div>
         </div>
+
+        {/* Row 2: note */}
+        {order.note && (
+          <p className="py-0.5 font-body text-xs text-on-surface-variant truncate">
+            {order.note}
+          </p>
+        )}
+
+        {/* Row 3: payment status and amount (only when the order has an invoice) */}
+        {showPaymentSection && (
+          <div className="flex items-center justify-between gap-2 mt-0.5 pt-1.5 border-t border-outline-variant/20">
+            <div className="flex flex-col items-start leading-tight min-w-0">
+              <span className={`font-label text-[9px] font-bold uppercase tracking-wide truncate ${PAYMENT_STATUS_TEXT[order.paymentStatus] ?? 'text-on-surface-variant'}`}>
+                {t(`invoice.status.${order.paymentStatus}`, { defaultValue: order.paymentStatus })}
+              </span>
+              {order.paymentStatus === 'PARTIALLY_PAID' && order.grandTotal != null && (
+                <span className="font-label text-[9px] font-bold uppercase tracking-wide text-on-surface-variant truncate">
+                  {t('customerOrders.balanceOf', { amount: formatBaht(order.grandTotal) })}
+                </span>
+              )}
+              <span className={`font-headline font-extrabold text-[13px] truncate ${requiresUrgentPayment ? 'text-error' : 'text-on-surface'}`}>
+                {formatBaht(balanceDue > 0 ? balanceDue : (order.grandTotal ?? 0))}
+              </span>
+            </div>
+            {balanceDue > 0 && (
+              <button
+                type="button"
+                onClick={(event) => { event.stopPropagation(); onPayNow?.(order.invoiceNumber, order.orderId); }}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-headline text-[11px] font-bold hover:opacity-95 active:scale-[0.98] transition-all shrink-0 focus:outline-none focus-visible:ring-2 ${requiresUrgentPayment ? 'bg-error text-on-error focus-visible:ring-error/60' : 'bg-primary text-on-primary focus-visible:ring-primary/60'}`}
+              >
+                <span className="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">payments</span>
+                {t('invoice.pay.action')}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
