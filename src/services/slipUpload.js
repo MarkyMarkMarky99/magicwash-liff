@@ -107,11 +107,14 @@ const RETRYABLE_ERRORS = new Set(['BAD_REQUEST', 'UNSUPPORTED_TYPE', 'FILE_TOO_L
  *   amount: number|null,
  *   paidAt: string|null,
  *   retryable: boolean,
+ *   invoiceViewSynced: boolean,
  * }} SlipOutcome
  */
 
 /** @returns {SlipOutcome} */
 function classify(data) {
+  const invoiceViewSynced = data?.invoiceViewSynced === true;
+
   if (data?.ok && data.status === 'VERIFIED') {
     return {
       tone: 'success',
@@ -119,6 +122,7 @@ function classify(data) {
       amount: typeof data.amount === 'number' ? data.amount : null,
       paidAt: data.paidAt ?? null,
       retryable: false,
+      invoiceViewSynced,
     };
   }
   if (data?.ok && data.status === 'PENDING') {
@@ -128,6 +132,7 @@ function classify(data) {
       amount: null,
       paidAt: null,
       retryable: false,
+      invoiceViewSynced,
     };
   }
   // data.ok === false, or a response shape we don't recognize (including a
@@ -139,6 +144,7 @@ function classify(data) {
     amount: null,
     paidAt: null,
     retryable: data ? RETRYABLE_ERRORS.has(data.error) : true,
+    invoiceViewSynced,
   };
 }
 

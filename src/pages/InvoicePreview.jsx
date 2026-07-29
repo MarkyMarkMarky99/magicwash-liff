@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, useRef, useCallback, useId } from 'rea
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
-import { getInvoiceByNumber } from '../api/gvizApi';
+import { getInvoiceByNumber, invalidateInvoiceCache } from '../api/gvizApi';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
@@ -517,6 +517,16 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
     });
     setSlipResult(outcome);
     setSlipStage('result');
+
+    if (outcome.invoiceViewSynced === true && !mockRow) {
+      try {
+        invalidateInvoiceCache(invoice.invoiceNumber);
+        const fresh = await getInvoiceByNumber(invoice.invoiceNumber);
+        if (fresh) setRow(fresh);
+      } catch {
+        // The payment result is already final; a refresh failure is harmless.
+      }
+    }
   };
 
   // Footer content is derived once so every visible state shares one fixed-height

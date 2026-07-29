@@ -38,11 +38,9 @@ import { createPaymentRecorder } from '../server/recordPayment.js';
 // ---------------------------------------------------------------------------
 // Timeout budget
 //
-// The whole request runs inside one serverless invocation. We don't control
-// the platform's own hard ceiling from this file, so we assume a conservative
-// ~25s wall-clock budget is available end-to-end (comfortably under Vercel's
-// function limits even on lower tiers) and split it so the step that MUST
-// succeed — the sheet write — gets the most room:
+// The whole request runs inside one serverless invocation. The route's
+// maxDuration is 30s, so the explicit downstream budgets below total 27s and
+// leave roughly 3s for upload completion, response parsing, and formatting:
 //   - SlipOK verification:  7s.  It's a single OCR+bank-lookup round trip;
 //     if it hasn't answered in 7s the bank-delay/timeout path already exists
 //     and a slower answer wouldn't change what we can safely tell the customer.
@@ -50,15 +48,143 @@ import { createPaymentRecorder } from '../server/recordPayment.js';
 //     has been observed both timing out past 20s and returning a spurious 404
 //     after the row was in fact written) — it gets the largest share because
 //     losing this write is the one outcome we must avoid.
-//   - Remaining ~3s: upload (already happened before either timeout starts)
-//     plus JSON/formatting overhead. Firebase upload of a <=1MB image is not
-//     timeout-bounded here because uploadSlip() doesn't accept one; in
+//   - InvoiceView sync: 5s. This is best-effort and follows Apps Script's
+//     redirecting web-app response path, while remaining bounded so it cannot
+//     consume the route's entire budget after the payment row is confirmed.
+//   - The remaining ~3s covers upload (already happened before either timeout
+//     starts) plus JSON/formatting overhead. Firebase upload of a <=1MB image
+//     is not timeout-bounded here because uploadSlip() doesn't accept one; in
 //     practice it resolves in well under a second for this payload size.
 // ---------------------------------------------------------------------------
 const VERIFY_TIMEOUT_MS = 7_000;
 const RECORD_TIMEOUT_MS = 15_000;
+const INVOICE_VIEW_SYNC_TIMEOUT_MS = 5_000;
 
 const RECORD_CREATED_BY = 'liff-verify-slip';
+
+function logInvoiceViewSyncFailure(reason, status) {
+  try {
+    const details = status === undefined ? { reason } : { reason, status };
+    console.warn('[verify-slip] InvoiceView sync did not complete.', details);
+  } catch {
+    // Observability must never affect the payment result.
+  }
+}
+
+/**
+ * Refresh the invoice read model after the payment row is confirmed.
+ *
+ * This is deliberately best-effort. The payment row is the source of truth
+ * for this route, and a slow or unavailable read-model sync must not change
+ * the response already earned by the customer.
+ */
+async function syncInvoiceView(invoiceNumber) {
+  try {
+    const configuredUrl = process.env.APPSCRIPT_INVOICE_VIEW_SYNC_URL;
+    if (typeof configuredUrl !== 'string' || configuredUrl.trim().length === 0) {
+      logInvoiceViewSyncFailure('missing_config');
+      return false;
+    }
+
+    let endpointUrl;
+    try {
+      endpointUrl = new URL(configuredUrl);
+    } catch {
+      logInvoiceViewSyncFailure('invalid_config');
+      return false;
+    }
+    if (endpointUrl.protocol !== 'http:' && endpointUrl.protocol !== 'https:') {
+      logInvoiceViewSyncFailure('invalid_config');
+      return false;
+    }
+
+    if (typeof globalThis.fetch !== 'function' || typeof globalThis.AbortController !== 'function') {
+      logInvoiceViewSyncFailure('runtime_unavailable');
+      return false;
+    }
+
+    const controller = new globalThis.AbortController();
+    let timeoutHandle;
+    let resolveTimeout;
+    const timeoutPromise = new Promise((resolve) => {
+      resolveTimeout = resolve;
+      timeoutHandle = setTimeout(() => {
+        try {
+          controller.abort();
+        } catch {
+          // The timeout result is still authoritative for this best-effort call.
+        }
+        resolveTimeout({ kind: 'timeout' });
+      }, INVOICE_VIEW_SYNC_TIMEOUT_MS);
+    });
+
+    const fetchPromise = Promise.resolve()
+      .then(() => globalThis.fetch(configuredUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ invoiceNumber }),
+        signal: controller.signal,
+      }))
+      .then(async (response) => {
+        let status;
+        let ok;
+        let body;
+        try {
+          status = response?.status;
+          ok = response?.ok;
+          if (!Number.isInteger(status) || status < 100 || status > 599 || typeof ok !== 'boolean') {
+            return { kind: 'invalid_response' };
+          }
+          if (typeof response.json !== 'function') {
+            return { kind: 'invalid_response' };
+          }
+          body = await response.json();
+        } catch {
+          return { kind: 'invalid_response' };
+        }
+        return { kind: 'response', status, ok, body };
+      })
+      .catch(() => ({ kind: 'network_failure' }));
+
+    let result;
+    try {
+      result = await Promise.race([fetchPromise, timeoutPromise]);
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
+
+    if (result.kind === 'timeout') {
+      logInvoiceViewSyncFailure('timeout');
+      return false;
+    }
+    if (result.kind === 'network_failure') {
+      logInvoiceViewSyncFailure('network_failure');
+      return false;
+    }
+    if (result.kind === 'invalid_response') {
+      logInvoiceViewSyncFailure('invalid_response');
+      return false;
+    }
+
+    let bodyAccepted = false;
+    try {
+      bodyAccepted = result.body?.ok === true;
+    } catch {
+      bodyAccepted = false;
+    }
+    if (!result.ok) {
+      logInvoiceViewSyncFailure('rejected_http', result.status);
+      return false;
+    } else if (!bodyAccepted) {
+      logInvoiceViewSyncFailure('rejected_body', result.status);
+      return false;
+    }
+    return true;
+  } catch {
+    logInvoiceViewSyncFailure('unexpected_failure');
+    return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Small pure helpers
@@ -360,6 +486,8 @@ export default async function handler(req, res) {
     }
 
     // Row confirmed written.
+    const invoiceViewSynced = await syncInvoiceView(invoiceNumber);
+
     if (verified) {
       return res.status(200).json({
         ok: true,
@@ -371,6 +499,7 @@ export default async function handler(req, res) {
         reference: slip.reference,
         messageKey: 'invoice.slip.verified',
         reasonCode: null,
+        invoiceViewSynced,
       });
     }
 
@@ -384,6 +513,7 @@ export default async function handler(req, res) {
         messageKey: `invoice.slip.error.${errorCode === 'SLIP_DUPLICATE' ? 'duplicate' : errorCode === 'SLIP_RECEIVER_MISMATCH' ? 'receiverMismatch' : 'amountMismatch'}`,
         reasonCode,
         recovery: { paymentId },
+        invoiceViewSynced,
       });
     }
 
@@ -399,6 +529,7 @@ export default async function handler(req, res) {
       reference: null,
       messageKey: 'invoice.slip.pending',
       reasonCode,
+      invoiceViewSynced,
     });
   } catch {
     // The route itself must never throw.
