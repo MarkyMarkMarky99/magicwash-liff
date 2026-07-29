@@ -34,7 +34,8 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
   const { t, i18n } = useTranslation();
   const dateLocale = getDateLocale(i18n.language);
   const hasInvoice = Boolean(order.invoiceNumber);
-  const hasPaymentStatus = hasInvoice && Boolean(order.paymentStatus);
+  const showPaymentSection = hasInvoice && Boolean(order.paymentStatus) && order.paymentStatus !== 'PAID';
+  const requiresUrgentPayment = order.paymentStatus === 'OVERDUE';
   const balanceDue = Number(order.balanceDue ?? 0);
   const cfg = STATUS_CONFIG[order.status] ?? {
     icon: 'receipt_long',
@@ -95,7 +96,7 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
         )}
 
         {/* Row 3: payment status and amount (only when the order has an invoice) */}
-        {hasPaymentStatus && (
+        {showPaymentSection && (
           <div className="flex items-center justify-between gap-2 mt-0.5 pt-1.5 border-t border-outline-variant/20">
             <div className="flex flex-col items-start leading-tight min-w-0">
               <span className={`font-label text-[9px] font-bold uppercase tracking-wide truncate ${PAYMENT_STATUS_TEXT[order.paymentStatus] ?? 'text-on-surface-variant'}`}>
@@ -106,7 +107,7 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
                   {t('customerOrders.balanceOf', { amount: formatBaht(order.grandTotal) })}
                 </span>
               )}
-              <span className="font-headline font-extrabold text-[13px] text-on-surface truncate">
+              <span className={`font-headline font-extrabold text-[13px] truncate ${requiresUrgentPayment ? 'text-error' : 'text-on-surface'}`}>
                 {formatBaht(balanceDue > 0 ? balanceDue : (order.grandTotal ?? 0))}
               </span>
             </div>
@@ -114,7 +115,7 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); onPayNow?.(order.invoiceNumber, order.orderId); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary text-on-primary font-headline text-[11px] font-bold hover:opacity-95 active:scale-[0.98] transition-all shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-headline text-[11px] font-bold hover:opacity-95 active:scale-[0.98] transition-all shrink-0 focus:outline-none focus-visible:ring-2 ${requiresUrgentPayment ? 'bg-error text-on-error focus-visible:ring-error/60' : 'bg-primary text-on-primary focus-visible:ring-primary/60'}`}
               >
                 <span className="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">payments</span>
                 {t('invoice.pay.action')}
