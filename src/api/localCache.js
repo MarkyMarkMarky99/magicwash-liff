@@ -104,8 +104,8 @@ export async function apiPost(table, payload) {
   return res.json();
 }
 
-export async function fetchAndCache(url, key, transform = (r) => r) {
-  const res = await fetch(url);
+export async function fetchAndCache(url, key, transform = (r) => r, { signal } = {}) {
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const rows = await res.json();
   const result = rows.map(transform);

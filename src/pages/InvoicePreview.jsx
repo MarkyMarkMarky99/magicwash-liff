@@ -5,10 +5,10 @@ import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
 import { toNumber } from '../api/numberUtils';
 import {
   getInvoiceByNumber,
-  getInvoiceByNumberFresh,
   invalidateInvoiceCache,
-  syncInvoiceView,
 } from '../api/gvizApi';
+import { getInvoiceByNumberViaAppScript } from '../api/appscriptApi';
+import { cacheKey, lsGetStale } from '../api/localCache';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
@@ -43,23 +43,6 @@ const METHOD_ICONS = {
   GIFT_VOUCHER:  'redeem',
   OTHER:         'receipt_long',
 };
-
-const OUTSTANDING_INVOICE_STATUSES = new Set(['UNPAID', 'PARTIALLY_PAID', 'OVERDUE']);
-
-function shouldShowDevelopmentSyncDiagnostic() {
-  if (import.meta.env.DEV) return true;
-  if (typeof window === 'undefined') return false;
-  return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-}
-
-function getSyncDiagnostic(error) {
-  const reason = typeof error?.reason === 'string' && /^[a-z_]+$/.test(error.reason)
-    ? error.reason
-    : 'unknown';
-  const status = Number.isInteger(error?.upstreamStatus) ? error.upstreamStatus : null;
-  const requestStatus = Number.isInteger(error?.status) ? error.status : null;
-  return { reason, status, requestStatus };
-}
 
 /* ── Defensive parsing ──
    Rows arrive raw from the sheet: nested documents are JSON strings that may be
@@ -189,6 +172,20 @@ function applyVerifiedPaymentToRow(row, invoice, outcome) {
     status: balanceDue > 0 ? 'PARTIALLY_PAID' : 'PAID',
     paymentsJson: JSON.stringify([...invoice.payments, payment]),
   };
+}
+
+/**
+ * Peeks the localStorage `invoiceView` cache without triggering a network
+ * request. Used to pick the right first-paint state (spinner vs. cached row)
+ * before the mount effect decides whether GViz or Apps Script should refresh it.
+ */
+function peekInvoiceViewCache(invoiceNumber) {
+  if (!invoiceNumber) return { cachedRow: null, cacheIsStale: false, isOutstandingOrUnknown: true };
+  const { value, isStale } = lsGetStale(cacheKey('invoiceView', invoiceNumber));
+  const cachedRow = value?.[0] ?? null;
+  const cachedBalanceDue = cachedRow ? toNumber(cachedRow.balanceDue) : null;
+  const isOutstandingOrUnknown = cachedRow == null || cachedBalanceDue == null || cachedBalanceDue > 0;
+  return { cachedRow, cacheIsStale: isStale, isOutstandingOrUnknown };
 }
 
 /**
@@ -392,10 +389,23 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   const { t, i18n } = useTranslation();
   const setOnBack = useContext(HeaderContext);
   const requestedInvoiceNumber = toText(invoiceNumber);
-  const [row, setRow] = useState(mockRow);
-  const [status, setStatus] = useState(mockRow ? 'done' : requestedInvoiceNumber ? 'loading' : 'notFound');
+  const [row, setRow] = useState(() => {
+    if (mockRow) return mockRow;
+    if (!requestedInvoiceNumber) return null;
+    const { cachedRow, cacheIsStale, isOutstandingOrUnknown } = peekInvoiceViewCache(requestedInvoiceNumber);
+    if (cachedRow == null) return null;
+    if (!isOutstandingOrUnknown) return cachedRow;
+    return cacheIsStale ? null : cachedRow;
+  });
+  const [status, setStatus] = useState(() => {
+    if (mockRow) return 'done';
+    if (!requestedInvoiceNumber) return 'notFound';
+    const { cachedRow, cacheIsStale, isOutstandingOrUnknown } = peekInvoiceViewCache(requestedInvoiceNumber);
+    if (cachedRow == null) return 'loading';
+    if (!isOutstandingOrUnknown) return 'done';
+    return cacheIsStale ? 'loading' : 'done';
+  });
   const [retryCount, setRetryCount] = useState(0);
-  const [syncDiagnostic, setSyncDiagnostic] = useState(null);
   const [proofUrl, setProofUrl] = useState(null); // open slip lightbox, or null
   const [payOpen, setPayOpen] = useState(false);  // QR payment popup
 
@@ -432,12 +442,56 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
       };
     }
 
+    const { cachedRow, cacheIsStale, isOutstandingOrUnknown } = peekInvoiceViewCache(requestedInvoiceNumber);
+
+    if (!isOutstandingOrUnknown) {
+      // Settled: the existing GViz SWR flow. Paint any cached row
+      // synchronously (fresh or stale) so this never flashes a loading
+      // state over data we already have — a cache-miss is the only case
+      // that blocks.
+      if (cachedRow != null) {
+        setRow(cachedRow);
+        setStatus('done');
+      } else {
+        setRow(null);
+        setStatus('loading');
+      }
+      getInvoiceByNumber(requestedInvoiceNumber)
+        .then((fresh) => {
+          if (!active) return;
+          if (!fresh) { setStatus('notFound'); return; }
+          setRow(fresh);
+          setStatus('done');
+        })
+        .catch(() => {
+          if (!active) return;
+          // A cached row already on screen must survive a failed refresh.
+          if (cachedRow == null) {
+            setRow(null);
+            setStatus('error');
+          }
+        });
+      return () => { active = false; controller.abort(); };
+    }
+
+    if (cachedRow != null && !cacheIsStale) {
+      setRow(cachedRow);
+      setStatus('done');
+      getInvoiceByNumberViaAppScript(requestedInvoiceNumber, { signal: controller.signal })
+        .then((fresh) => {
+          if (!active || !fresh) return;
+          setRow(fresh);
+        })
+        .catch(() => {});
+      return () => { active = false; controller.abort(); };
+    }
+
     setRow(null);
     setStatus('loading');
 
     async function loadInvoice() {
       try {
-        const fresh = await getInvoiceByNumberFresh(requestedInvoiceNumber, {
+        const fresh = await getInvoiceByNumberViaAppScript(requestedInvoiceNumber, {
           signal: controller.signal,
         });
         if (!active) return;
@@ -449,34 +503,6 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
 
         setRow(fresh);
         setStatus('done');
-
-        const invoice = readInvoice(fresh);
-        const hasOutstandingBalance = (invoice?.balanceDue ?? 0) > 0;
-        const hasOutstandingStatus = OUTSTANDING_INVOICE_STATUSES.has(invoice?.status);
-        if (!hasOutstandingBalance && !hasOutstandingStatus) return;
-
-        void (async () => {
-          try {
-            await syncInvoiceView(requestedInvoiceNumber, { signal: controller.signal });
-          } catch (error) {
-            if (!active || error?.name === 'AbortError') return;
-            if (shouldShowDevelopmentSyncDiagnostic()) {
-              setSyncDiagnostic({ invoiceNumber: requestedInvoiceNumber, ...getSyncDiagnostic(error) });
-            }
-            return;
-          }
-
-          if (!active) return;
-          try {
-            const refreshed = await getInvoiceByNumberFresh(requestedInvoiceNumber, {
-              signal: controller.signal,
-            });
-            if (active && refreshed) setRow(refreshed);
-          } catch (error) {
-            // A failed refresh must preserve the already-rendered invoice.
-            if (!active || error?.name === 'AbortError') return;
-          }
-        })();
       } catch (error) {
         if (!active || error?.name === 'AbortError') return;
         setRow(null);
@@ -514,11 +540,18 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   }, [slipStage, resetSlip]);
 
   const handleSlipPick = useCallback(async (file) => {
-    const processed = await preprocessSlipImage(file);
-    setSlipPayload(processed);
-    setSlipPreviewUrl(`data:${processed.contentType};base64,${processed.base64}`);
-    setSlipResult(null);
-    setSlipStage('preview');
+    try {
+      const processed = await preprocessSlipImage(file);
+      setSlipPayload(processed);
+      setSlipPreviewUrl(`data:${processed.contentType};base64,${processed.base64}`);
+      setSlipResult(null);
+      setSlipStage('preview');
+    } catch (outcome) {
+      setSlipPayload(null);
+      setSlipPreviewUrl(null);
+      setSlipResult(outcome);
+      setSlipStage('result');
+    }
   }, []);
 
   const handleRetry = useCallback(() => {
@@ -578,6 +611,7 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   const balanceDue = invoice.balanceDue ?? 0;
   const paidAmountForDisplay = invoice.paidAmount > 0 ? -invoice.paidAmount : invoice.paidAmount;
   const hasPayments = invoice.payments.length > 0;
+  const hasInvoiceAdjustments = invoice.adjustments.length > 0;
 
   // `balanceDue` only nets off *verified* money, so a payment the customer has
   // already submitted but the shop has not confirmed is invisible to it. Netting
@@ -766,11 +800,22 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
           >
             <div className="px-4 py-3">
               <TotalRow label={t('invoice.totals.subtotal')} value={formatMoney(invoice.subtotal, currency)} />
-              <TotalRow
-                label={t('invoice.totals.adjustments')}
-                value={formatMoney(invoice.adjustmentTotal, currency)}
-                tone={(invoice.adjustmentTotal ?? 0) < 0 ? 'credit' : 'default'}
-              />
+              {hasInvoiceAdjustments ? (
+                invoice.adjustments.map((adj, idx) => (
+                  <TotalRow
+                    key={`${adj.label}-${idx}`}
+                    label={adj.label}
+                    value={formatMoney(adj.amount, currency)}
+                    tone={(adj.amount ?? 0) < 0 ? 'credit' : 'default'}
+                  />
+                ))
+              ) : (
+                <TotalRow
+                  label={t('invoice.totals.adjustments')}
+                  value={formatMoney(invoice.adjustmentTotal, currency)}
+                  tone={(invoice.adjustmentTotal ?? 0) < 0 ? 'credit' : 'default'}
+                />
+              )}
               <TotalRow
                 label={t('invoice.totals.paid')}
                 value={formatMoney(paidAmountForDisplay, currency)}
@@ -801,34 +846,6 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
             referrerPolicy="no-referrer"
             className="max-h-[80vh] max-w-full w-auto object-contain rounded-xl shadow-2xl"
           />
-        </Lightbox>
-      )}
-
-      {shouldShowDevelopmentSyncDiagnostic() && syncDiagnostic?.invoiceNumber === requestedInvoiceNumber && (
-        <Lightbox label={t('invoice.syncDiagnostic.title')} onClose={() => setSyncDiagnostic(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-2xl">
-            <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-error text-2xl" aria-hidden="true">sync_problem</span>
-              <div className="min-w-0">
-                <h2 className="font-headline text-lg font-bold text-on-surface">{t('invoice.syncDiagnostic.title')}</h2>
-                <p className="mt-2 font-body text-sm leading-relaxed text-on-surface-variant">
-                  {t('invoice.syncDiagnostic.message')}
-                </p>
-              </div>
-            </div>
-            <dl className="mt-5 space-y-2 rounded-xl bg-surface-container px-4 py-3 font-body text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-on-surface-variant">{t('invoice.syncDiagnostic.reason')}</dt>
-                <dd className="text-right font-medium text-on-surface">{syncDiagnostic.reason}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-on-surface-variant">{t('invoice.syncDiagnostic.serverStatus')}</dt>
-                <dd className="text-right font-medium text-on-surface">
-                  {syncDiagnostic.status ?? syncDiagnostic.requestStatus ?? t('invoice.syncDiagnostic.notAvailable')}
-                </dd>
-              </div>
-            </dl>
-          </div>
         </Lightbox>
       )}
 

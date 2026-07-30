@@ -105,13 +105,6 @@
     "loadError": "Failed to load invoice",
     "retry": "Try again",
     "close": "Close",
-    "syncDiagnostic": {
-      "title": "Invoice refresh diagnostic",
-      "message": "The latest invoice sync did not complete. The invoice on screen is the first successful read and remains available.",
-      "reason": "Cause",
-      "serverStatus": "Server status",
-      "notAvailable": "Not supplied"
-    },
     "pay": {
       "action": "Pay now",
       "title": "Scan to pay",
