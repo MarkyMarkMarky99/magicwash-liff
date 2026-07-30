@@ -101,37 +101,3 @@ export async function getInvoiceByNumberFresh(invoiceNumber, { signal } = {}) {
   if (rows.length) lsSet(key, rows);
   return rows[0] ?? null;
 }
-
-export async function syncInvoiceView(invoiceNumber, { signal } = {}) {
-  const normalizedInvoiceNumber = normalizeInvoiceNumber(invoiceNumber);
-  const res = await fetch('/api/sync-invoice-view', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ invoiceNumber: normalizedInvoiceNumber }),
-    signal,
-  });
-  let result = null;
-  try {
-    result = await res.json();
-  } catch {
-    // The HTTP status below remains useful without a response body.
-  }
-
-  if (!res.ok || result?.ok !== true) {
-    const error = new Error('[gvizApi] Invoice sync failed');
-    error.name = 'InvoiceSyncError';
-    error.status = res.status;
-
-    const diagnostic = result?.diagnostic;
-    if (diagnostic && typeof diagnostic === 'object') {
-      if (typeof diagnostic.reason === 'string' && /^[a-z_]+$/.test(diagnostic.reason)) {
-        error.reason = diagnostic.reason;
-      }
-      if (Number.isInteger(diagnostic.status) && diagnostic.status >= 100 && diagnostic.status <= 599) {
-        error.upstreamStatus = diagnostic.status;
-      }
-    }
-
-    throw error;
-  }
-}
