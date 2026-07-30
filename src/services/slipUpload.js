@@ -26,7 +26,29 @@
 // ---------------------------------------------------------------------------
 
 const MAX_EDGE_PX = 1080;
+const MAX_BYTES = 1_000_000;
 const WEBP_QUALITY = 0.9;
+const FILE_TOO_LARGE_MESSAGE_KEY = 'invoice.slip.error.fileTooLarge';
+const BAD_REQUEST_MESSAGE_KEY = 'invoice.slip.error.badRequest';
+
+function createLocalErrorOutcome(messageKey) {
+  return {
+    tone: 'error',
+    messageKey,
+    amount: null,
+    paidAt: null,
+    retryable: true,
+    invoiceViewSynced: false,
+  };
+}
+
+function createLocalFileTooLargeOutcome() {
+  return createLocalErrorOutcome(FILE_TOO_LARGE_MESSAGE_KEY);
+}
+
+function createLocalBadRequestOutcome() {
+  return createLocalErrorOutcome(BAD_REQUEST_MESSAGE_KEY);
+}
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -50,18 +72,38 @@ function blobToBase64(blob) {
   });
 }
 
+async function fallbackToOriginal(file) {
+  const contentType = typeof file?.type === 'string' ? file.type : '';
+  const size = file?.size;
+  if (typeof size !== 'number' || !Number.isFinite(size) || size < 0 || size > MAX_BYTES) {
+    throw createLocalFileTooLargeOutcome();
+  }
+
+  try {
+    const base64 = await blobToBase64(file);
+    return {
+      base64,
+      filename: typeof file?.name === 'string' && file.name ? file.name : 'slip',
+      contentType: contentType || 'application/octet-stream',
+    };
+  } catch {
+    throw createLocalBadRequestOutcome();
+  }
+}
+
 /**
  * Scales `file` down (never up) so its longest edge is at most MAX_EDGE_PX,
  * re-encodes as WebP at WEBP_QUALITY, and returns it as base64. Falls back
- * to the original file's own bytes/content-type if decoding or WebP
- * encoding isn't available in this browser — the server accepts JPEG/PNG.
+ * to the original file's own bytes/content-type if WebP encoding is not
+ * available or produces a result over the server's byte limit.
  *
  * @param {File} file
  * @returns {Promise<{ base64: string, filename: string, contentType: string }>}
  */
 export async function preprocessSlipImage(file) {
-  const objectUrl = URL.createObjectURL(file);
+  let objectUrl;
   try {
+    objectUrl = URL.createObjectURL(file);
     const img = await loadImage(objectUrl);
     const longestEdge = Math.max(img.naturalWidth, img.naturalHeight);
     const scale = longestEdge > MAX_EDGE_PX ? MAX_EDGE_PX / longestEdge : 1;
@@ -75,11 +117,7 @@ export async function preprocessSlipImage(file) {
     ctx.drawImage(img, 0, 0, width, height);
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', WEBP_QUALITY));
-    if (
-      blob?.type === 'image/webp' ||
-      blob?.type === 'image/png' ||
-      blob?.type === 'image/jpeg'
-    ) {
+    if (blob?.type === 'image/webp' && blob.size <= MAX_BYTES) {
       const base64 = await blobToBase64(blob);
       return {
         base64,
@@ -90,10 +128,9 @@ export async function preprocessSlipImage(file) {
   } catch {
     // Decoding/encoding failed — fall through to the original file.
   } finally {
-    URL.revokeObjectURL(objectUrl);
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
-  const base64 = await blobToBase64(file);
-  return { base64, filename: file.name || 'slip', contentType: file.type || 'application/octet-stream' };
+  return fallbackToOriginal(file);
 }
 
 // ---------------------------------------------------------------------------

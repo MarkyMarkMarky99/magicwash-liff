@@ -514,11 +514,18 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   }, [slipStage, resetSlip]);
 
   const handleSlipPick = useCallback(async (file) => {
-    const processed = await preprocessSlipImage(file);
-    setSlipPayload(processed);
-    setSlipPreviewUrl(`data:${processed.contentType};base64,${processed.base64}`);
-    setSlipResult(null);
-    setSlipStage('preview');
+    try {
+      const processed = await preprocessSlipImage(file);
+      setSlipPayload(processed);
+      setSlipPreviewUrl(`data:${processed.contentType};base64,${processed.base64}`);
+      setSlipResult(null);
+      setSlipStage('preview');
+    } catch (outcome) {
+      setSlipPayload(null);
+      setSlipPreviewUrl(null);
+      setSlipResult(outcome);
+      setSlipStage('result');
+    }
   }, []);
 
   const handleRetry = useCallback(() => {
