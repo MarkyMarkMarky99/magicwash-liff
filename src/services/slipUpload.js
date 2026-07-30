@@ -75,9 +75,17 @@ export async function preprocessSlipImage(file) {
     ctx.drawImage(img, 0, 0, width, height);
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', WEBP_QUALITY));
-    if (blob) {
+    if (
+      blob?.type === 'image/webp' ||
+      blob?.type === 'image/png' ||
+      blob?.type === 'image/jpeg'
+    ) {
       const base64 = await blobToBase64(blob);
-      return { base64, filename: 'slip.webp', contentType: 'image/webp' };
+      return {
+        base64,
+        filename: blob.type === 'image/png' ? 'slip.png' : blob.type === 'image/jpeg' ? 'slip.jpg' : 'slip.webp',
+        contentType: blob.type,
+      };
     }
   } catch {
     // Decoding/encoding failed — fall through to the original file.
