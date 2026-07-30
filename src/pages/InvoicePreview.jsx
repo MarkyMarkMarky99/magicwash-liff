@@ -5,9 +5,10 @@ import { formatDisplayDate, getDateLocale } from '../api/dateUtils';
 import { toNumber } from '../api/numberUtils';
 import {
   getInvoiceByNumber,
-  getInvoiceByNumberFresh,
   invalidateInvoiceCache,
 } from '../api/gvizApi';
+import { getInvoiceByNumberViaAppScript } from '../api/appscriptApi';
+import { cacheKey, lsGetStale } from '../api/localCache';
 import { HeaderContext } from '../App';
 import DateChip from '../components/ui/DateChip';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
@@ -171,6 +172,20 @@ function applyVerifiedPaymentToRow(row, invoice, outcome) {
     status: balanceDue > 0 ? 'PARTIALLY_PAID' : 'PAID',
     paymentsJson: JSON.stringify([...invoice.payments, payment]),
   };
+}
+
+/**
+ * Peeks the localStorage `invoiceView` cache without triggering a network
+ * request. Used to pick the right first-paint state (spinner vs. cached row)
+ * before the mount effect decides whether GViz or Apps Script should refresh it.
+ */
+function peekInvoiceViewCache(invoiceNumber) {
+  if (!invoiceNumber) return { cachedRow: null, cacheIsStale: false, isOutstandingOrUnknown: true };
+  const { value, isStale } = lsGetStale(cacheKey('invoiceView', invoiceNumber));
+  const cachedRow = value?.[0] ?? null;
+  const cachedBalanceDue = cachedRow ? toNumber(cachedRow.balanceDue) : null;
+  const isOutstandingOrUnknown = cachedRow == null || cachedBalanceDue == null || cachedBalanceDue > 0;
+  return { cachedRow, cacheIsStale: isStale, isOutstandingOrUnknown };
 }
 
 /**
@@ -374,8 +389,22 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
   const { t, i18n } = useTranslation();
   const setOnBack = useContext(HeaderContext);
   const requestedInvoiceNumber = toText(invoiceNumber);
-  const [row, setRow] = useState(mockRow);
-  const [status, setStatus] = useState(mockRow ? 'done' : requestedInvoiceNumber ? 'loading' : 'notFound');
+  const [row, setRow] = useState(() => {
+    if (mockRow) return mockRow;
+    if (!requestedInvoiceNumber) return null;
+    const { cachedRow, cacheIsStale, isOutstandingOrUnknown } = peekInvoiceViewCache(requestedInvoiceNumber);
+    if (cachedRow == null) return null;
+    if (!isOutstandingOrUnknown) return cachedRow;
+    return cacheIsStale ? null : cachedRow;
+  });
+  const [status, setStatus] = useState(() => {
+    if (mockRow) return 'done';
+    if (!requestedInvoiceNumber) return 'notFound';
+    const { cachedRow, cacheIsStale, isOutstandingOrUnknown } = peekInvoiceViewCache(requestedInvoiceNumber);
+    if (cachedRow == null) return 'loading';
+    if (!isOutstandingOrUnknown) return 'done';
+    return cacheIsStale ? 'loading' : 'done';
+  });
   const [retryCount, setRetryCount] = useState(0);
   const [proofUrl, setProofUrl] = useState(null); // open slip lightbox, or null
   const [payOpen, setPayOpen] = useState(false);  // QR payment popup
@@ -413,12 +442,56 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
       };
     }
 
+    const { cachedRow, cacheIsStale, isOutstandingOrUnknown } = peekInvoiceViewCache(requestedInvoiceNumber);
+
+    if (!isOutstandingOrUnknown) {
+      // Settled: the existing GViz SWR flow. Paint any cached row
+      // synchronously (fresh or stale) so this never flashes a loading
+      // state over data we already have — a cache-miss is the only case
+      // that blocks.
+      if (cachedRow != null) {
+        setRow(cachedRow);
+        setStatus('done');
+      } else {
+        setRow(null);
+        setStatus('loading');
+      }
+      getInvoiceByNumber(requestedInvoiceNumber)
+        .then((fresh) => {
+          if (!active) return;
+          if (!fresh) { setStatus('notFound'); return; }
+          setRow(fresh);
+          setStatus('done');
+        })
+        .catch(() => {
+          if (!active) return;
+          // A cached row already on screen must survive a failed refresh.
+          if (cachedRow == null) {
+            setRow(null);
+            setStatus('error');
+          }
+        });
+      return () => { active = false; controller.abort(); };
+    }
+
+    if (cachedRow != null && !cacheIsStale) {
+      setRow(cachedRow);
+      setStatus('done');
+      getInvoiceByNumberViaAppScript(requestedInvoiceNumber, { signal: controller.signal })
+        .then((fresh) => {
+          if (!active || !fresh) return;
+          setRow(fresh);
+        })
+        .catch(() => {});
+      return () => { active = false; controller.abort(); };
+    }
+
     setRow(null);
     setStatus('loading');
 
     async function loadInvoice() {
       try {
-        const fresh = await getInvoiceByNumberFresh(requestedInvoiceNumber, {
+        const fresh = await getInvoiceByNumberViaAppScript(requestedInvoiceNumber, {
           signal: controller.signal,
         });
         if (!active) return;

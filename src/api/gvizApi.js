@@ -1,4 +1,4 @@
-import { cacheKey, gvizSwrFetch, gvizUrl, lsClear, lsSet } from './localCache';
+import { cacheKey, gvizSwrFetch, lsClear } from './localCache';
 import { toNumber } from './numberUtils';
 
 const INVOICE_VIEW_COLS = 'invoiceNumber,status,billingType,billingPeriodStart,billingPeriodEnd,issuedDate,dueDate,customerId,customerJson,itemsJson,adjustmentsJson,paymentsJson,subtotal,adjustmentTotal,grandTotal,paidAmount,balanceDue';
@@ -31,7 +31,7 @@ export async function getPhotosByOrderId(orderId, onRevalidate) {
   return rows.filter((r) => r.imageUrl);
 }
 
-function normalizeInvoiceNumber(invoiceNumber) {
+export function normalizeInvoiceNumber(invoiceNumber) {
   if (typeof invoiceNumber !== 'string' || !invoiceNumber.trim()) {
     throw new Error('[gvizApi] Invalid invoice number');
   }
@@ -79,25 +79,4 @@ export async function getInvoicesByCustomerId(customerId, onRevalidate) {
     INVOICE_SUMMARY_COLS,
     'invoiceViewByCustomer',
   );
-}
-
-export async function getInvoiceByNumberFresh(invoiceNumber, { signal } = {}) {
-  const normalizedInvoiceNumber = normalizeInvoiceNumber(invoiceNumber);
-  const key = cacheKey('invoiceView', normalizedInvoiceNumber);
-  lsClear(key);
-
-  const url = gvizUrl({
-    source: 'invoiceView',
-    filterField: 'invoiceNumber',
-    filterValue: normalizedInvoiceNumber,
-    limit: 1,
-    cols: INVOICE_VIEW_COLS,
-  });
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-  const rows = await res.json();
-  if (!Array.isArray(rows)) throw new Error('[gvizApi] Invalid invoice response');
-  if (rows.length) lsSet(key, rows);
-  return rows[0] ?? null;
 }
