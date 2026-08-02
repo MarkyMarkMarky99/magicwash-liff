@@ -786,14 +786,6 @@ function hasExactKeys(record, expected) {
     expected.every((key) => hasOwn(record, key))
   );
 }
-function hasOnlyKeys(record, required, optional) {
-  return (
-    required.every((key) => hasOwn(record, key)) &&
-    Object.keys(record).every(
-      (key) => required.includes(key) || optional.includes(key),
-    )
-  );
-}
 // SheetLib returns the row it actually persisted under `data`, with the write
 // metadata nested under `write`. Two success variants exist, and BOTH mean the
 // Payment row reached the sheet:
@@ -815,28 +807,16 @@ function isSuccessEnvelope(value) {
     return false;
   }
   if (
-    !hasOnlyKeys(
-      value,
-      ["resource", "status", "target", "data", "write"],
-      ["read_back_failed", "reason"],
-    )
-  ) {
-    return false;
-  }
-  if (
     value.resource !== "sheet" ||
     value.status !== "ok" ||
     value.target !== "Payment"
   ) {
     return false;
   }
-  // `write` is not exact-key checked like the outer envelope, but it is not
-  // blindly trusted either. The asymmetry is deliberate: this predicate answers
-  // exactly one question — did the Payment row land? — and an unknown extra key
-  // inside `write` does not change that answer. Rejecting on one would recreate
-  // the very bug this validator was fixed for: a false negative that tells the
-  // customer their payment failed after it succeeded, and invites a retry that
-  // duplicates the row.
+  // This predicate checks only fields that determine whether the row landed.
+  // Unknown metadata on either envelope does not change that answer. Rejecting
+  // it would create a false negative that tells the customer their payment
+  // failed after it succeeded, and invites a retry that duplicates the row.
   //
   // `appended_rows` is the exception, and must be rejected. SheetLib only emits
   // it for a batch append, and this recorder only ever sends a single object, so
