@@ -40,12 +40,12 @@ import { syncInvoiceView } from '../server/invoiceViewSync.js';
 // Timeout budget
 //
 // The whole request runs inside one serverless invocation. The route's
-// maxDuration is 60s, so the explicit downstream budgets below total 37s and
-// leave ample room for upload completion, response parsing, and formatting:
+// maxDuration is 60s, so the explicit downstream budgets below total 52s and
+// leave 8s for upload completion, response parsing, and formatting:
 //   - SlipOK verification:  7s.  It's a single OCR+bank-lookup round trip;
 //     if it hasn't answered in 7s the bank-delay/timeout path already exists
 //     and a slower answer wouldn't change what we can safely tell the customer.
-//   - Payment record write: 15s. This is the slow, flaky leg (the live gateway
+//   - Payment record write: 30s. This is the slow, flaky leg (the live gateway
 //     has been observed both timing out past 20s and returning a spurious 404
 //     after the row was in fact written) — it gets the largest share because
 //     losing this write is the one outcome we must avoid.
@@ -63,7 +63,7 @@ import { syncInvoiceView } from '../server/invoiceViewSync.js';
 //     practice it resolves in well under a second for this payload size.
 // ---------------------------------------------------------------------------
 const VERIFY_TIMEOUT_MS = 7_000;
-const RECORD_TIMEOUT_MS = 15_000;
+const RECORD_TIMEOUT_MS = 30_000;
 const RECORD_CREATED_BY = 'liff-verify-slip';
 
 // ---------------------------------------------------------------------------
