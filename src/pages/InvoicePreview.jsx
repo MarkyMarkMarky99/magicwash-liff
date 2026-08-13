@@ -490,18 +490,31 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
     setStatus('loading');
 
     async function loadInvoice() {
+      let fresh;
       try {
-        const fresh = await getInvoiceByNumberViaAppScript(requestedInvoiceNumber, {
+        fresh = await getInvoiceByNumberViaAppScript(requestedInvoiceNumber, {
           signal: controller.signal,
         });
-        if (!active) return;
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+      }
 
-        if (!fresh) {
+      if (!active) return;
+
+      if (fresh) {
+        setRow(fresh);
+        setStatus('done');
+        return;
+      }
+
+      try {
+        const fallback = await getInvoiceByNumber(requestedInvoiceNumber);
+        if (!active) return;
+        if (!fallback) {
           setStatus('notFound');
           return;
         }
-
-        setRow(fresh);
+        setRow(fallback);
         setStatus('done');
       } catch (error) {
         if (!active || error?.name === 'AbortError') return;
