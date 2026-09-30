@@ -6,6 +6,9 @@
     },
     "api/sync-invoice-view.js": {
       "maxDuration": 20
+    },
+    "api/appscript-invoice.js": {
+      "maxDuration": 60
     }
   }
 }
