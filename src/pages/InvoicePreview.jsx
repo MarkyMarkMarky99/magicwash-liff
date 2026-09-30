@@ -384,6 +384,8 @@ function TotalRow({ label, value, tone = 'default' }) {
 }
 
 const NOOP = () => {};
+const CLIENT_FETCH_ATTEMPTS = 2;
+const CLIENT_RETRY_DELAY_MS = 1_000;
 
 export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow = null }) {
   const { t, i18n } = useTranslation();
@@ -489,11 +491,25 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
     setRow(null);
     setStatus('loading');
 
+    // One automatic client retry covers failures the server-side retry can't
+    // see: a flaky mobile connection or a gateway timeout from Vercel itself.
+    async function fetchWithRetry() {
+      for (let attempt = 1; ; attempt++) {
+        try {
+          return await getInvoiceByNumberViaAppScript(requestedInvoiceNumber, {
+            signal: controller.signal,
+          });
+        } catch (error) {
+          if (error?.name === 'AbortError' || attempt >= CLIENT_FETCH_ATTEMPTS) throw error;
+          await new Promise((resolve) => setTimeout(resolve, CLIENT_RETRY_DELAY_MS));
+          if (!active) throw error;
+        }
+      }
+    }
+
     async function loadInvoice() {
       try {
-        const fresh = await getInvoiceByNumberViaAppScript(requestedInvoiceNumber, {
-          signal: controller.signal,
-        });
+        const fresh = await fetchWithRetry();
         if (!active) return;
 
         if (!fresh) {
@@ -505,6 +521,12 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
         setStatus('done');
       } catch (error) {
         if (!active || error?.name === 'AbortError') return;
+        // A stale cached copy beats an error screen; the next visit refreshes it.
+        if (cachedRow != null) {
+          setRow(cachedRow);
+          setStatus('done');
+          return;
+        }
         setRow(null);
         setStatus('error');
       }

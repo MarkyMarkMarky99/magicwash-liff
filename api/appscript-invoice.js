@@ -16,6 +16,23 @@ import { getInvoiceViewFetchResult } from '../server/invoiceViewFetch.js';
 
 const INVOICE_NUMBER_RE = /^INV\d{12}$/;
 
+// Apps Script doGet fails transiently (cold starts, quota/lock blips, HTML
+// error pages). A second attempt usually lands on a warm instance, so retry
+// those once here instead of surfacing a 502 the customer has to refresh past.
+// Config/runtime failures are permanent and are not retried. Worst case is
+// 2 × 15s upstream timeout + backoff, inside the 60s maxDuration in vercel.json.
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 500;
+const NON_RETRYABLE_REASONS = new Set(['missing_config', 'invalid_config', 'runtime_unavailable']);
+
+function shouldRetry(result) {
+  if (result.ok || NON_RETRYABLE_REASONS.has(result.reason)) return false;
+  if (result.reason === 'rejected_http' && result.status >= 400 && result.status < 500 && result.status !== 429) {
+    return false;
+  }
+  return true;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -27,7 +44,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'invoiceNumber is required' });
   }
 
-  const result = await getInvoiceViewFetchResult(invoiceNumber, { logPrefix: 'appscript-invoice' });
+  let result;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    result = await getInvoiceViewFetchResult(invoiceNumber, { logPrefix: 'appscript-invoice' });
+    if (attempt === MAX_ATTEMPTS || !shouldRetry(result)) break;
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+  }
 
   if (!result.ok) {
     return res.status(502).json({ error: 'UPSTREAM_FETCH_FAILED' });
