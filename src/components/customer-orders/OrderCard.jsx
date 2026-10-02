@@ -1,15 +1,17 @@
 const STATUS_CONFIG = {
-  // Real statuses from OrdersView sheet
-  'SUBMITTED': { icon: 'local_laundry_service', badge: 'bg-amber-100 text-amber-700', avatar: 'bg-amber-50 text-amber-600' },
-  'PENDING':   { icon: 'schedule',              badge: 'bg-amber-100 text-amber-700', avatar: 'bg-amber-50 text-amber-600' },
-  'APPROVED':  { icon: 'task_alt',              badge: 'bg-blue-100 text-blue-700',   avatar: 'bg-blue-50 text-blue-700'   },
-  'CONFIRM':   { icon: 'check_circle',          badge: 'bg-green-100 text-green-700', avatar: 'bg-green-50 text-green-700' },
-  'RECEIVED':  { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',    avatar: 'bg-teal-50 text-teal-700'   },
-  'COMPLETED': { icon: 'done_all',              badge: 'bg-green-100 text-green-700', avatar: 'bg-green-50 text-green-700' },
-  // Backward-compatible Thai labels (mock data)
-  'เสร็จแล้ว': { icon: 'check_circle',         badge: 'bg-green-100 text-green-700',  avatar: 'bg-green-50 text-green-700'  },
-  'กำลังซัก':  { icon: 'local_laundry_service', badge: 'bg-amber-100 text-amber-700',  avatar: 'bg-amber-50 text-amber-600'  },
-  'รับแล้ว':   { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',     avatar: 'bg-teal-50 text-teal-700'    },
+  PENDING: { icon: 'schedule', badge: 'bg-amber-100 text-amber-700', avatar: 'bg-amber-50 text-amber-600' },
+  RECEIVED: { icon: 'inventory_2', badge: 'bg-teal-50 text-teal-700', avatar: 'bg-teal-50 text-teal-700' },
+  IN_PROGRESS: { icon: 'local_laundry_service', badge: 'bg-blue-100 text-blue-700', avatar: 'bg-blue-50 text-blue-700' },
+  COMPLETED: { icon: 'done_all', badge: 'bg-green-100 text-green-700', avatar: 'bg-green-50 text-green-700' },
+};
+
+const STATUS_ALIASES = {
+  SUBMITTED: 'IN_PROGRESS',
+  CONFIRM: 'IN_PROGRESS',
+  APPROVED: 'IN_PROGRESS',
+  'กำลังซัก': 'IN_PROGRESS',
+  'รับแล้ว': 'RECEIVED',
+  'เสร็จแล้ว': 'COMPLETED',
 };
 
 // Payment status uses the app's real MD3 text tokens (not the order-status
@@ -38,7 +40,10 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
   const isOverdue = order.paymentStatus === 'OVERDUE';
   const hasOutstandingPayment = order.paymentStatus === 'UNPAID' || isOverdue;
   const balanceDue = Number(order.balanceDue ?? 0);
-  const cfg = STATUS_CONFIG[order.status] ?? {
+  const normalizedStatus = typeof order.status === 'string' ? order.status.trim().toUpperCase().replace(/\s+/g, '_') : '';
+  const displayStatus = STATUS_ALIASES[normalizedStatus] ?? normalizedStatus;
+  const knownStatus = STATUS_CONFIG[displayStatus];
+  const cfg = knownStatus ?? {
     icon: 'receipt_long',
     badge: 'bg-gray-100 text-gray-600',
     avatar: 'bg-gray-100 text-gray-500',
@@ -60,9 +65,11 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
             <h3 className="font-headline font-bold text-primary text-[14px] leading-tight truncate">
               {formatDisplayDate(order.receivedDate, { day: '2-digit', month: 'short', year: 'numeric' }, dateLocale)}
             </h3>
-            <span className={`inline-flex items-center px-1.5 py-px rounded-full font-label text-[9px] font-bold uppercase tracking-wide shrink-0 ${cfg.badge}`}>
-              {order.status}
-            </span>
+            {knownStatus && (
+              <span className={`inline-flex items-center px-1.5 py-px rounded-full font-label text-[9px] font-bold uppercase tracking-wide shrink-0 ${cfg.badge}`}>
+                {t(`customerOrders.orderStatuses.${displayStatus}`)}
+              </span>
+            )}
           </div>
           <div
             className="flex items-center gap-2.5 shrink-0"

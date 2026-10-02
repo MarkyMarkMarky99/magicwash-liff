@@ -79,6 +79,12 @@
     "email": "อีเมล"
   },
   "customerOrders": {
+    "orderStatuses": {
+      "PENDING": "รอดำเนินการ",
+      "RECEIVED": "รับผ้าแล้ว",
+      "IN_PROGRESS": "กำลังดำเนินการ",
+      "COMPLETED": "เสร็จสิ้น"
+    },
     "customerNo": "หมายเลขลูกค้า",
     "type": "ประเภทลูกค้า",
     "schedulePickup": "นัดรับผ้า",

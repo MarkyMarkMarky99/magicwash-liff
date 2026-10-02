@@ -79,6 +79,12 @@
     "email": "Email"
   },
   "customerOrders": {
+    "orderStatuses": {
+      "PENDING": "PENDING",
+      "RECEIVED": "RECEIVED",
+      "IN_PROGRESS": "IN PROGRESS",
+      "COMPLETED": "COMPLETED"
+    },
     "customerNo": "Customer No.",
     "type": "Customer Type",
     "schedulePickup": "Schedule Pickup",
