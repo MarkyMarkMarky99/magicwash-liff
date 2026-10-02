@@ -93,13 +93,13 @@ export default function OrderCard({ order, onViewPhotos, onSelectOrder, onViewIn
               <span className={`font-label text-[9px] font-bold uppercase tracking-wide truncate ${PAYMENT_STATUS_TEXT[order.paymentStatus] ?? 'text-on-surface-variant'}`}>
                 {t(`invoice.status.${order.paymentStatus}`, { defaultValue: order.paymentStatus })}
               </span>
-              {order.paymentStatus === 'PARTIALLY_PAID' && order.grandTotal != null && (
-                <span className="font-label text-[9px] font-bold uppercase tracking-wide text-on-surface-variant truncate">
-                  {t('customerOrders.balanceOf', { amount: formatBaht(order.grandTotal) })}
-                </span>
-              )}
-              <span className={`font-headline font-extrabold text-[13px] truncate ${hasOutstandingPayment ? 'text-on-error-container' : 'text-on-surface'}`}>
+              <span className={`max-w-full font-headline font-extrabold text-[13px] truncate ${hasOutstandingPayment ? 'text-on-error-container' : 'text-on-surface'}`}>
                 {formatBaht(balanceDue > 0 ? balanceDue : (order.grandTotal ?? 0))}
+                {order.paymentStatus === 'PARTIALLY_PAID' && order.grandTotal != null && (
+                  <span className="font-label text-[9px] font-bold text-on-surface-variant">
+                    {' '}{t('customerOrders.invoiceOfTotal', { total: formatBaht(order.grandTotal) })}
+                  </span>
+                )}
               </span>
             </div>
             {balanceDue > 0 && (

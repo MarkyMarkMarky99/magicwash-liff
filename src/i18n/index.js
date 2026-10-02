@@ -3,7 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import th from './locales/th.json';
 
-const savedLang = localStorage.getItem('lang') || 'th';
+const savedLang = localStorage.getItem('lang') || 'en';
 
 i18n
   .use(initReactI18next)
