@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import SectionCard from '../ui/SectionCard';
 import { getInvoicePaymentPresentation } from '../../api/invoiceSummary';
 import { PAYMENT_STATUS_TEXT } from './paymentStatus';
-import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
+import { formatDisplayDate, getDateLocale, parseSheetDate } from '../../api/dateUtils';
 
 function formatBaht(amount) {
   if (amount == null) return '—';
@@ -12,6 +13,13 @@ function formatBaht(amount) {
 export default function CustomerInvoiceList({ invoices, status, onRetry, onViewInvoice }) {
   const { t, i18n } = useTranslation();
   const dateLocale = getDateLocale(i18n.language);
+  const sortedInvoices = useMemo(() => [...invoices].sort((a, b) => {
+    const aDate = parseSheetDate(a.issuedDate)?.getTime();
+    const bDate = parseSheetDate(b.issuedDate)?.getTime();
+    if (aDate == null) return bDate == null ? 0 : 1;
+    if (bDate == null) return -1;
+    return bDate - aDate;
+  }), [invoices]);
   const refreshing = status === 'loading' || status === 'refreshing';
 
   return (
@@ -48,7 +56,7 @@ export default function CustomerInvoiceList({ invoices, status, onRetry, onViewI
       )}
       {invoices.length > 0 && (
         <ul className="divide-y divide-outline-variant/10">
-          {invoices.map((invoice) => {
+          {sortedInvoices.map((invoice) => {
             const { canPay, remainingDue, awaitingVerification } = getInvoicePaymentPresentation(invoice);
             const pendingCovered = awaitingVerification && remainingDue === 0;
             const collectable = !['DRAFT', 'CANCELLED', 'VOID'].includes(invoice.status);
