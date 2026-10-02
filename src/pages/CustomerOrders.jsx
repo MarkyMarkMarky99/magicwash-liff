@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { getCustomerById } from '../api/customerApi';
 import { getOrdersByCustomerId, mergeOrdersWithInvoices } from '../api/orderApi';
 import { getCustomerInvoices, invalidateCustomerInvoicesAfterPayment } from '../api/customerInvoices';
-import { getWaitingPickups, clearAppointmentsCache } from '../api/appointmentApi';
+import { getCustomerAppointments, filterWaitingPickups, filterAppointmentHistory, clearAppointmentsCache } from '../api/appointmentApi';
 import { lsClear, cacheKey } from '../api/localCache';
 import { HeaderContext } from '../App';
 import OrderList from '../components/customer-orders/OrderList';
@@ -12,7 +12,7 @@ import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
 import BottomNavBar from '../components/ui/BottomNavBar';
 import CustomerSectionIcon from '../components/customer-orders/CustomerSectionIcon';
 import CustomerInvoiceList from '../components/customer-orders/CustomerInvoiceList';
-import WaitingPickupCard from '../components/customer-orders/WaitingPickupCard';
+import AppointmentHistoryList from '../components/customer-orders/AppointmentHistoryList';
 import SectionCard from '../components/ui/SectionCard';
 import OrderGallery from './OrderGallery';
 import BookPickup from './BookPickup';
@@ -34,7 +34,9 @@ export default function CustomerOrders({ custId }) {
   const [invoicePreview, setInvoicePreview]   = useState(null); // { invoiceNumber, origin, orderId? }
   const [booking, setBooking]                 = useState(null); // { type: 'pickup'|'delivery', orderId: string|null }
   const [bookingBusy, setBookingBusy]         = useState(false); // true while a booking POST is in flight
-  const [waitingPickups, setWaitingPickups]   = useState([]);    // upcoming active pickups (from Appointments)
+  const [appointments, setAppointments]       = useState([]);
+  const waitingPickups = useMemo(() => filterWaitingPickups(appointments), [appointments]);
+  const appointmentHistory = useMemo(() => filterAppointmentHistory(appointments), [appointments]);
   const { t } = useTranslation();
   const setOnBack = useContext(HeaderContext);
   const sectionItems = ['orders', 'packages', 'invoices', 'appointments'].map((key) => ({
@@ -45,13 +47,18 @@ export default function CustomerOrders({ custId }) {
     ? `${customer.customerIndex}-${String(customer.phone).slice(-4)}`
     : customer?.customerId || '–';
 
-  const loadWaitingPickups = useCallback((id = custId) => {
+  const loadAppointments = useCallback((id = custId) => {
     if (!id) return;
-    setAppointmentStatus('loading');
-    return getWaitingPickups(id, (fresh) => setWaitingPickups(fresh))
-      .then((res) => { setWaitingPickups(res); setAppointmentStatus('done'); })
+    setAppointmentStatus((current) => current === 'loading' ? current : 'refreshing');
+    return getCustomerAppointments(id, (fresh) => setAppointments(fresh))
+      .then((res) => { setAppointments(res); setAppointmentStatus('done'); })
       .catch(() => setAppointmentStatus('error'));
   }, [custId]);
+
+  const handleRefreshAppointments = useCallback(() => {
+    clearAppointmentsCache(custId);
+    return loadAppointments(custId);
+  }, [custId, loadAppointments]);
 
   const loadInvoices = useCallback((id = custId, options) => {
     if (!id) return;
@@ -84,9 +91,9 @@ export default function CustomerOrders({ custId }) {
       })
       .catch(() => setStatus('error'));
 
-    loadWaitingPickups(custId);
+    loadAppointments(custId);
     loadInvoices(custId);
-  }, [custId, loadWaitingPickups, loadInvoices]);
+  }, [custId, loadAppointments, loadInvoices]);
 
   useEffect(() => {
     if (invoicePreview) return;
@@ -117,11 +124,11 @@ export default function CustomerOrders({ custId }) {
       if (customerRes) setCustomer(customerRes);
       setRawOrders(ordersRes);
 
-      loadWaitingPickups(custId);
+      loadAppointments(custId);
       setStatus('done');
     } catch { /* silently fail */ }
     finally { setRefreshing(false); }
-  }, [custId, refreshing, loadWaitingPickups, loadInvoices]);
+  }, [custId, refreshing, loadAppointments, loadInvoices]);
 
   const handleSelectOrder = (orderId) => {
     setSelectedOrderId(orderId);
@@ -191,7 +198,7 @@ export default function CustomerOrders({ custId }) {
           type={booking.type}
           orderId={booking.orderId}
           onBusyChange={setBookingBusy}
-          onDone={() => { setBooking(null); loadWaitingPickups(custId); }}
+          onDone={() => { setBooking(null); loadAppointments(custId); }}
         />
       )}
 
@@ -259,29 +266,11 @@ export default function CustomerOrders({ custId }) {
                     />
                   )}
                   {activeSection === 'appointments' && (
-                    <SectionCard icon="event" title={t('waitingPickup.sectionTitle')}>
-                      {appointmentStatus === 'loading' && (
-                        <p className="px-4 py-4 text-sm text-on-surface-variant" role="status">{t('loading')}</p>
-                      )}
-                      {appointmentStatus === 'error' && (
-                        <div className="px-4 py-4 space-y-2">
-                          <p className="text-sm text-error" role="alert">{t('customerOrders.appointmentsLoadError')}</p>
-                          <button type="button" onClick={() => loadWaitingPickups()} className="rounded text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-primary">
-                            {t('invoice.retry')}
-                          </button>
-                        </div>
-                      )}
-                      {waitingPickups.length > 0 && (
-                        <div className="divide-y divide-outline-variant/10">
-                          {waitingPickups.map((appointment) => (
-                            <WaitingPickupCard key={appointment.appointmentId} appointment={appointment} />
-                          ))}
-                        </div>
-                      )}
-                      {appointmentStatus === 'done' && waitingPickups.length === 0 && (
-                        <p className="px-4 py-4 text-sm text-on-surface-variant">{t('customerOrders.noAppointments')}</p>
-                      )}
-                    </SectionCard>
+                    <AppointmentHistoryList
+                      appointments={appointmentHistory}
+                      status={appointmentStatus}
+                      onRefresh={handleRefreshAppointments}
+                    />
                   )}
                   {activeSection === 'packages' && (
                     <SectionCard icon="confirmation_number" title={t('customerOrders.sections.packages')}>

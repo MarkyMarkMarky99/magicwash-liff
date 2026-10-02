@@ -79,6 +79,21 @@
     "email": "อีเมล"
   },
   "customerOrders": {
+    "appointmentHistory": "ประวัติการนัดหมาย",
+    "refreshAppointments": "รีเฟรชการนัดหมาย",
+    "appointmentTypes": {
+      "PICKUP": "รับผ้า",
+      "DELIVERY": "ส่งผ้า",
+      "PICKUP_DELIVERY": "รับและส่งผ้า"
+    },
+    "appointmentStatuses": {
+      "PENDING": "รอดำเนินการ",
+      "CONFIRMED": "ยืนยันแล้ว",
+      "IN_TRANSIT": "อยู่ระหว่างเดินทาง",
+      "COMPLETED": "เสร็จสิ้น",
+      "CANCELLED": "ยกเลิก",
+      "NO_SHOW": "ไม่มาตามนัด"
+    },
     "sectionsLabel": "เมนูลูกค้า",
     "sections": {
       "orders": "รายการซัก",
@@ -94,8 +109,8 @@
     "invoicePending": "รอตรวจสอบ {{amount}}",
     "invoiceRefreshError": "อัปเดตการชำระเงินไม่สำเร็จ กดรีเฟรชใบแจ้งหนี้เพื่อลองอีกครั้ง",
     "refreshInvoices": "รีเฟรชใบแจ้งหนี้",
-    "noAppointments": "ไม่มีนัดรับผ้าที่กำลังจะมาถึง",
-    "appointmentsLoadError": "โหลดนัดรับผ้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+    "noAppointments": "ยังไม่มีการนัดหมาย",
+    "appointmentsLoadError": "โหลดการนัดหมายไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
     "packagesUnavailable": "ยังไม่เปิดให้บริการแพ็กเกจ",
     "customerLoadError": "โหลดข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
     "missingCustomerId": "ไม่พบ Customer ID ใน URL",

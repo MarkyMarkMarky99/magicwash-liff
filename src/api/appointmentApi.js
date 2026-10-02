@@ -1,4 +1,4 @@
-import { cacheKey, gvizSwrFetch, gvizUrl, lsSet, lsClear } from './localCache';
+import { cacheKey, gvizSwrFetch, gvizUrl, lsSet, lsClear } from './localCache.js';
 
 // Columns fetched for both the booking guard and the "waiting for pickup" list.
 // Same set for both callers so the shared cache entry stays consistent.
@@ -75,18 +75,25 @@ export async function getAppointmentsFresh(customerId) {
 }
 
 /**
- * SWR read used for display (the "waiting for pickup" cards).
- * Returns upcoming, active PICKUP appointments, soonest first.
- * Display-tolerant: stale-while-revalidate is fine here.
+ * Shared raw display read for appointment history and upcoming pickup cards.
+ * The booking guard continues using its separate fresh, fail-closed read.
  */
-export async function getWaitingPickups(customerId, onRevalidate) {
-  const rows = await gvizSwrFetch(
+export async function getCustomerAppointments(customerId, onRevalidate) {
+  return gvizSwrFetch(
     'appointments',
     apptFilterSpec(customerId),
     customerId,
     undefined,
-    onRevalidate ? (rows) => onRevalidate(filterWaitingPickups(rows)) : null,
+    onRevalidate,
     APPT_COLS,
+  );
+}
+
+/** Upcoming active pickup rows, retained for existing callers. */
+export async function getWaitingPickups(customerId, onRevalidate) {
+  const rows = await getCustomerAppointments(
+    customerId,
+    onRevalidate ? (fresh) => onRevalidate(filterWaitingPickups(fresh)) : null,
   );
   return filterWaitingPickups(rows);
 }
@@ -111,6 +118,29 @@ export function filterWaitingPickups(list) {
       return d !== null && d >= today;
     })
     .sort(byDateAsc);
+}
+
+/**
+ * All nondeleted appointments for display, newest date first. Invalid dates
+ * remain visible with a placeholder at the end; no booking rules are applied.
+ */
+export function filterAppointmentHistory(list) {
+  return (Array.isArray(list) ? list : [])
+    .filter((appointment) => appointment && typeof appointment === 'object' && notDeleted(appointment))
+    .map((appointment) => {
+      const isoDate = toISODateStr(appointment.appointmentDate);
+      const parsedDate = isoDate ? new Date(`${isoDate}T00:00:00Z`) : null;
+      const validDate = parsedDate && !Number.isNaN(parsedDate.getTime())
+        && parsedDate.toISOString().slice(0, 10) === isoDate;
+      return {
+        ...appointment,
+        appointmentDate: validDate ? isoDate : null,
+        appointmentType: normType(appointment.appointmentType),
+        status: normType(appointment.status),
+      };
+    })
+    .sort((a, b) => (b.appointmentDate ?? '').localeCompare(a.appointmentDate ?? '')
+      || String(a.timeSlot ?? '').localeCompare(String(b.timeSlot ?? '')));
 }
 
 /**

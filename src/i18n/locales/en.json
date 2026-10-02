@@ -79,6 +79,21 @@
     "email": "Email"
   },
   "customerOrders": {
+    "appointmentHistory": "Appointment History",
+    "refreshAppointments": "Refresh appointments",
+    "appointmentTypes": {
+      "PICKUP": "Pickup",
+      "DELIVERY": "Delivery",
+      "PICKUP_DELIVERY": "Pickup & delivery"
+    },
+    "appointmentStatuses": {
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "IN_TRANSIT": "En route",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "NO_SHOW": "No show"
+    },
     "sectionsLabel": "Customer sections",
     "sections": {
       "orders": "Orders",
@@ -94,8 +109,8 @@
     "invoicePending": "Awaiting verification {{amount}}",
     "invoiceRefreshError": "Couldn't refresh payments. Use Refresh invoices to try again.",
     "refreshInvoices": "Refresh invoices",
-    "noAppointments": "No upcoming pickups",
-    "appointmentsLoadError": "Couldn't load upcoming pickups. Please try again.",
+    "noAppointments": "No appointments yet",
+    "appointmentsLoadError": "Couldn't load appointments. Please try again.",
     "packagesUnavailable": "Packages are not available yet.",
     "customerLoadError": "Couldn't load customer details. Please try again.",
     "missingCustomerId": "No customer ID was provided.",
