@@ -12,18 +12,8 @@ const STATUS_CONFIG = {
   'รับแล้ว':   { icon: 'inventory_2',           badge: 'bg-teal-50 text-teal-700',     avatar: 'bg-teal-50 text-teal-700'    },
 };
 
-// Payment status uses the app's real MD3 text tokens (not the order-status
-// Tailwind palette above) so the two status systems stay visually distinct.
-const PAYMENT_STATUS_TEXT = {
-  'PAID':           'text-primary',
-  'PARTIALLY_PAID': 'text-on-secondary-container',
-  'UNPAID':         'text-on-error-container',
-  'OVERDUE':        'text-on-error-container',
-  'CANCELLED':      'text-on-surface-variant',
-  'VOID':           'text-on-surface-variant',
-};
-
 import { useTranslation } from 'react-i18next';
+import { PAYMENT_STATUS_TEXT } from './paymentStatus';
 import { formatDisplayDate, getDateLocale } from '../../api/dateUtils';
 
 function formatBaht(n) {

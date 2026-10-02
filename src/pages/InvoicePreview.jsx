@@ -385,7 +385,7 @@ function TotalRow({ label, value, tone = 'default' }) {
 
 const NOOP = () => {};
 
-export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow = null }) {
+export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow = null, onPaymentRecorded }) {
   const { t, i18n } = useTranslation();
   const setOnBack = useContext(HeaderContext);
   const requestedInvoiceNumber = toText(invoiceNumber);
@@ -655,6 +655,10 @@ export default function InvoicePreview({ invoiceNumber, onBack = NOOP, mockRow =
     });
     setSlipResult(outcome);
     setSlipStage('result');
+
+    if (!mockRow && ['success', 'pending'].includes(outcome.tone)) {
+      onPaymentRecorded?.(outcome);
+    }
 
     if (outcome.tone === 'success') {
       setRow((currentRow) => applyVerifiedPaymentToRow(currentRow, readInvoice(currentRow), outcome));

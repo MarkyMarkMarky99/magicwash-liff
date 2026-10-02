@@ -1,5 +1,5 @@
-import { cacheKey, fetchAndCache } from './localCache';
-import { normalizeInvoiceNumber } from './gvizApi';
+import { cacheKey, fetchAndCache } from './localCache.js';
+import { normalizeInvoiceNumber } from './gvizApi.js';
 
 export async function getInvoiceByNumberViaAppScript(invoiceNumber, { signal } = {}) {
   const normalized = normalizeInvoiceNumber(invoiceNumber);

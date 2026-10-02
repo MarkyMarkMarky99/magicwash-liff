@@ -1,5 +1,5 @@
-import { cacheKey, gvizSwrFetch, lsClear } from './localCache';
-import { toNumber } from './numberUtils';
+import { cacheKey, gvizSwrFetch, lsClear, gvizUrl } from './localCache.js';
+import { normalizeInvoiceSummary } from './invoiceSummary.js';
 
 const INVOICE_VIEW_COLS = 'invoiceNumber,status,billingType,billingPeriodStart,billingPeriodEnd,issuedDate,dueDate,customerId,customerJson,itemsJson,adjustmentsJson,paymentsJson,subtotal,adjustmentTotal,grandTotal,paidAmount,balanceDue';
 
@@ -57,26 +57,15 @@ export async function getInvoiceByNumber(invoiceNumber, onRevalidate) {
   return rows[0] ?? null;
 }
 
-const INVOICE_SUMMARY_COLS = 'invoiceNumber,status,customerId,grandTotal,balanceDue';
+const INVOICE_SUMMARY_COLS = 'invoiceNumber,status,customerId,issuedDate,dueDate,grandTotal,paidAmount,balanceDue,paymentsJson';
 
-function transformInvoiceSummary(row) {
-  return {
-    invoiceNumber: row.invoiceNumber,
-    status: row.status,
-    customerId: row.customerId,
-    grandTotal: toNumber(row.grandTotal),
-    balanceDue: toNumber(row.balanceDue),
-  };
-}
-
-export async function getInvoicesByCustomerId(customerId, onRevalidate) {
-  return gvizSwrFetch(
-    'invoiceView',
-    { filterField: 'customerId', filterValue: customerId },
-    customerId,
-    transformInvoiceSummary,
-    onRevalidate ? (rows) => onRevalidate(rows) : null,
-    INVOICE_SUMMARY_COLS,
-    'invoiceViewByCustomer',
-  );
+export async function getInvoicesByCustomerId(customerId) {
+  const url = gvizUrl({
+    source: 'invoiceView', filterField: 'customerId', filterValue: customerId, cols: INVOICE_SUMMARY_COLS,
+  });
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const rows = await response.json();
+  if (!Array.isArray(rows)) throw new Error('Invalid invoice summary response');
+  return rows.map(normalizeInvoiceSummary);
 }

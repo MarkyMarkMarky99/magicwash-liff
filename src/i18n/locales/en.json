@@ -79,6 +79,26 @@
     "email": "Email"
   },
   "customerOrders": {
+    "sectionsLabel": "Customer sections",
+    "sections": {
+      "orders": "Orders",
+      "packages": "Packages",
+      "invoices": "Invoices",
+      "appointments": "Appointments"
+    },
+    "noInvoices": "No invoices yet",
+    "invoicesLoadError": "Couldn't load invoices. Please try again.",
+    "invoiceBalance": "Balance due {{amount}}",
+    "invoicePaid": "Paid {{amount}}",
+    "invoiceOfTotal": "of {{total}}",
+    "invoicePending": "Awaiting verification {{amount}}",
+    "invoiceRefreshError": "Couldn't refresh payments. Use Refresh invoices to try again.",
+    "refreshInvoices": "Refresh invoices",
+    "noAppointments": "No upcoming pickups",
+    "appointmentsLoadError": "Couldn't load upcoming pickups. Please try again.",
+    "packagesUnavailable": "Packages are not available yet.",
+    "customerLoadError": "Couldn't load customer details. Please try again.",
+    "missingCustomerId": "No customer ID was provided.",
     "customerNo": "Customer No.",
     "type": "Customer Type",
     "schedulePickup": "Schedule Pickup",

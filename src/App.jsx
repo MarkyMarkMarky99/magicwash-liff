@@ -12,6 +12,7 @@ import { getMockActiveOrder } from './mocks/activeOrder';
 import { getDevInvoiceViewRow } from './mocks/invoiceDev';
 import ConfirmBooking from './pages/ConfirmBooking';
 import InvoicePreview from './pages/InvoicePreview';
+import FooterNavPreview from './pages/dev/FooterNavPreview';
 
 /** Pages use this context to set / clear the header's back button. */
 export const HeaderContext = createContext(null);
@@ -76,6 +77,14 @@ function AppShell({ children }) {
 export default function App() {
   const params = new URLSearchParams(window.location.search);
 
+  // Local component preview — no LIFF or customer data requests.
+  if (import.meta.env.DEV && params.get('dev') === 'footer') {
+    return (
+      <AppShell>
+        <FooterNavPreview />
+      </AppShell>
+    );
+  }
   // --- Photos route: standalone, no LIFF ---
   // URL: /?photos&orderId=ORD-12345  (legacy: ?gallery&orderId=xxx still works)
   if (params.has('photos') || params.has('gallery')) {

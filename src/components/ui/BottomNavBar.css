@@ -1,0 +1,112 @@
+.bottom-nav-bar {
+  --bottom-nav-lime: var(--color-lime, #b2df26);
+  position: relative;
+  z-index: 10;
+  margin-top: -1.5rem;
+  flex-shrink: 0;
+  border-radius: 1.5rem 1.5rem 0 0;
+  background: var(--color-primary);
+  padding: .5rem .5rem max(.375rem, calc(env(safe-area-inset-bottom) - .75rem));
+  color: var(--color-on-primary);
+  box-shadow: 0 -4px 16px color-mix(in srgb, black 12%, transparent);
+}
+
+/* Active icon floats above the edge on the Vue navigation's lime sticker. */
+.bottom-nav-bar__item {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0 2px 4px;
+  color: color-mix(in srgb, var(--color-on-primary) 70%, transparent);
+  font-family: Manrope, var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  line-height: 1.1;
+  transition: color 160ms ease;
+}
+
+.bottom-nav-bar__item:focus {
+  outline: none;
+}
+
+.bottom-nav-bar__item:not(.is-active):hover {
+  color: var(--color-on-primary);
+}
+
+.bottom-nav-bar__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 15px;
+}
+
+.bottom-nav-bar__icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bottom-nav-bar__item:focus-visible .bottom-nav-bar__icon {
+  box-shadow: 0 0 0 2px var(--bottom-nav-lime);
+}
+
+.bottom-nav-bar__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-nav-bar__item.is-active {
+  color: var(--bottom-nav-lime);
+}
+
+.bottom-nav-bar__item.is-active .bottom-nav-bar__icon {
+  width: 46px;
+  height: 46px;
+  margin-top: -30px;
+  background: var(--bottom-nav-lime);
+  color: var(--color-primary);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--color-primary) 70%, black);
+  transform: rotate(-7deg);
+  animation: bottom-nav-float-pop 420ms cubic-bezier(.2, 1.5, .4, 1) both;
+}
+
+.bottom-nav-bar__item.is-active .bottom-nav-bar__icon > * {
+  transform: rotate(7deg);
+}
+
+.bottom-nav-bar__item.is-active .bottom-nav-bar__icon svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 2.8;
+}
+
+.bottom-nav-bar__item.is-active .bottom-nav-bar__label {
+  margin-top: 24px;
+  font-weight: 800;
+}
+
+@keyframes bottom-nav-float-pop {
+  0% { transform: translateY(22px) rotate(-7deg) scale(.8); }
+  60% { transform: translateY(-5px) rotate(-7deg) scale(1.06); }
+  100% { transform: translateY(0) rotate(-7deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-nav-bar__item {
+    transition: none;
+  }
+
+  .bottom-nav-bar__item.is-active .bottom-nav-bar__icon {
+    animation: none;
+  }
+}

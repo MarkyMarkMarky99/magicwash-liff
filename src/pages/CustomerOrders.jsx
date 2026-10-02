@@ -1,15 +1,19 @@
-import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCustomerById } from '../api/customerApi';
 import { getOrdersByCustomerId, mergeOrdersWithInvoices } from '../api/orderApi';
-import { getInvoicesByCustomerId } from '../api/gvizApi';
+import { getCustomerInvoices, invalidateCustomerInvoicesAfterPayment } from '../api/customerInvoices';
 import { getWaitingPickups, clearAppointmentsCache } from '../api/appointmentApi';
 import { lsClear, cacheKey } from '../api/localCache';
 import { HeaderContext } from '../App';
 import OrderList from '../components/customer-orders/OrderList';
 import OrderDetailSheet from '../components/customer-orders/OrderDetailSheet';
 import CustomerDetailsCard from '../components/ui/CustomerDetailsCard';
-import PageActionFooter from '../components/ui/PageActionFooter';
+import BottomNavBar from '../components/ui/BottomNavBar';
+import CustomerSectionIcon from '../components/customer-orders/CustomerSectionIcon';
+import CustomerInvoiceList from '../components/customer-orders/CustomerInvoiceList';
+import WaitingPickupCard from '../components/customer-orders/WaitingPickupCard';
+import SectionCard from '../components/ui/SectionCard';
 import OrderGallery from './OrderGallery';
 import BookPickup from './BookPickup';
 import InvoicePreview from './InvoicePreview';
@@ -18,6 +22,10 @@ export default function CustomerOrders({ custId }) {
   const [customer, setCustomer]               = useState(null);
   const [rawOrders, setRawOrders]              = useState([]);
   const [invoices, setInvoices]                = useState([]);
+  const [invoiceStatus, setInvoiceStatus]      = useState('loading');
+  const invoiceRequestId = useRef(0);
+  const [activeSection, setActiveSection]      = useState('orders');
+  const [appointmentStatus, setAppointmentStatus] = useState('loading');
   const orders = useMemo(() => mergeOrdersWithInvoices(rawOrders, invoices), [rawOrders, invoices]);
   const [status, setStatus]                   = useState('loading');
   const [refreshing, setRefreshing]           = useState(false);
@@ -29,22 +37,37 @@ export default function CustomerOrders({ custId }) {
   const [waitingPickups, setWaitingPickups]   = useState([]);    // upcoming active pickups (from Appointments)
   const { t } = useTranslation();
   const setOnBack = useContext(HeaderContext);
+  const sectionItems = ['orders', 'packages', 'invoices', 'appointments'].map((key) => ({
+    key,
+    label: t(`customerOrders.sections.${key}`),
+  }));
   const customerNumber = customer?.customerIndex && customer?.phone
     ? `${customer.customerIndex}-${String(customer.phone).slice(-4)}`
     : customer?.customerId || '–';
 
   const loadWaitingPickups = useCallback((id = custId) => {
     if (!id) return;
-    getWaitingPickups(id, (fresh) => setWaitingPickups(fresh))
-      .then((res) => setWaitingPickups(res))
-      .catch(() => { /* display-only, ignore */ });
+    setAppointmentStatus('loading');
+    return getWaitingPickups(id, (fresh) => setWaitingPickups(fresh))
+      .then((res) => { setWaitingPickups(res); setAppointmentStatus('done'); })
+      .catch(() => setAppointmentStatus('error'));
   }, [custId]);
 
-  const loadInvoices = useCallback((id = custId) => {
+  const loadInvoices = useCallback((id = custId, options) => {
     if (!id) return;
-    getInvoicesByCustomerId(id, (fresh) => setInvoices(fresh))
-      .then((res) => setInvoices(res))
-      .catch(() => { /* enrichment-only, ignore */ });
+    const requestId = ++invoiceRequestId.current;
+    setInvoiceStatus((current) => current === 'loading' ? current : 'refreshing');
+    return getCustomerInvoices(id, (fresh) => {
+      if (requestId === invoiceRequestId.current) setInvoices(fresh);
+    }, options)
+      .then((res) => {
+        if (requestId !== invoiceRequestId.current) return;
+        setInvoices(res);
+        setInvoiceStatus('done');
+      })
+      .catch(() => {
+        if (requestId === invoiceRequestId.current) setInvoiceStatus('error');
+      });
   }, [custId]);
 
   useEffect(() => {
@@ -83,23 +106,22 @@ export default function CustomerOrders({ custId }) {
     if (!custId || refreshing) return;
     lsClear(cacheKey('customer', custId));
     lsClear(cacheKey('ordersViewV3', custId));
-    lsClear(cacheKey('invoiceViewByCustomer', custId));
     clearAppointmentsCache(custId);
     setRefreshing(true);
     try {
-      const [customerRes, ordersRes, invoicesRes] = await Promise.all([
+      const [customerRes, ordersRes] = await Promise.all([
         getCustomerById(custId),
         getOrdersByCustomerId(custId),
-        getInvoicesByCustomerId(custId),
+        loadInvoices(custId, { refresh: true }),
       ]);
       if (customerRes) setCustomer(customerRes);
       setRawOrders(ordersRes);
-      setInvoices(invoicesRes);
+
       loadWaitingPickups(custId);
       setStatus('done');
     } catch { /* silently fail */ }
     finally { setRefreshing(false); }
-  }, [custId, refreshing, loadWaitingPickups]);
+  }, [custId, refreshing, loadWaitingPickups, loadInvoices]);
 
   const handleSelectOrder = (orderId) => {
     setSelectedOrderId(orderId);
@@ -121,6 +143,12 @@ export default function CustomerOrders({ custId }) {
     }
     setInvoicePreview(null);
   }, [invoicePreview]);
+
+  const handlePaymentRecorded = useCallback((outcome) => {
+    if (invalidateCustomerInvoicesAfterPayment(custId, outcome)) {
+      loadInvoices(custId, { refresh: true });
+    }
+  }, [custId, loadInvoices]);
 
   const handleViewPhotosFromSheet = (orderId) => {
     setSelectedOrderId(null);
@@ -145,6 +173,7 @@ export default function CustomerOrders({ custId }) {
           key={invoicePreview.invoiceNumber}
           invoiceNumber={invoicePreview.invoiceNumber}
           onBack={handleInvoiceBack}
+          onPaymentRecorded={handlePaymentRecorded}
         />
       )}
 
@@ -166,7 +195,7 @@ export default function CustomerOrders({ custId }) {
         />
       )}
 
-      {/* Orders list view */}
+      {/* Customer sections */}
       {!invoicePreview && !galleryOrderId && !booking && (
         <>
           <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col">
@@ -174,7 +203,7 @@ export default function CustomerOrders({ custId }) {
             {status === 'loading' && (
               <div className="flex-1 flex flex-col items-center justify-center gap-3">
                 <span className="material-symbols-outlined text-primary text-5xl animate-pulse">local_laundry_service</span>
-                <p className="font-body text-on-surface-variant text-sm">กำลังโหลดข้อมูล…</p>
+                <p className="font-body text-on-surface-variant text-sm">{t('loading')}</p>
               </div>
             )}
 
@@ -182,7 +211,7 @@ export default function CustomerOrders({ custId }) {
               <div className="flex-1 flex flex-col items-center justify-center gap-3">
                 <span className="material-symbols-outlined text-error text-5xl">error_outline</span>
                 <p className="font-body text-on-surface-variant text-sm text-center">
-                  {custId ? 'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' : 'ไม่พบ Customer ID ใน URL'}
+                  {t(custId ? 'customerOrders.customerLoadError' : 'customerOrders.missingCustomerId')}
                 </p>
               </div>
             )}
@@ -198,26 +227,78 @@ export default function CustomerOrders({ custId }) {
                     customerType={customer?.customerType}
                   />
                 </div>
-                <div className="flex-1 px-4 pb-6">
-                  <OrderList
-                    orders={orders}
-                    waitingPickups={waitingPickups}
-                    onViewPhotos={setGalleryOrderId}
-                    onSelectOrder={handleSelectOrder}
-                    onViewInvoice={handleShowInvoiceFromList}
-                    onPayNow={handleShowInvoiceFromList}
-                    onRefresh={handleRefresh}
-                    refreshing={refreshing}
-                  />
+                <div className="flex-1 px-4 pb-14 space-y-4">
+                  {(activeSection === 'orders' || activeSection === 'appointments') && (
+                    <button
+                      type="button"
+                      onClick={handleShowBookPickup}
+                      className="w-full h-12 rounded-2xl px-4 flex items-center justify-center gap-2 bg-primary text-on-primary font-headline font-bold text-sm shadow-sm hover:opacity-95 active:scale-[0.98] transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <span className="material-symbols-outlined text-[20px]" aria-hidden="true">event</span>
+                      {t('customerOrders.schedulePickup')}
+                    </button>
+                  )}
+                  {activeSection === 'orders' && (
+                    <OrderList
+                      orders={orders}
+                      waitingPickups={waitingPickups}
+                      onViewPhotos={setGalleryOrderId}
+                      onSelectOrder={handleSelectOrder}
+                      onViewInvoice={handleShowInvoiceFromList}
+                      onPayNow={handleShowInvoiceFromList}
+                      onRefresh={handleRefresh}
+                      refreshing={refreshing}
+                    />
+                  )}
+                  {activeSection === 'invoices' && (
+                    <CustomerInvoiceList
+                      invoices={invoices}
+                      status={invoiceStatus}
+                      onRetry={() => loadInvoices(custId, { refresh: true })}
+                      onViewInvoice={handleShowInvoiceFromList}
+                    />
+                  )}
+                  {activeSection === 'appointments' && (
+                    <SectionCard icon="event" title={t('waitingPickup.sectionTitle')}>
+                      {appointmentStatus === 'loading' && (
+                        <p className="px-4 py-4 text-sm text-on-surface-variant" role="status">{t('loading')}</p>
+                      )}
+                      {appointmentStatus === 'error' && (
+                        <div className="px-4 py-4 space-y-2">
+                          <p className="text-sm text-error" role="alert">{t('customerOrders.appointmentsLoadError')}</p>
+                          <button type="button" onClick={() => loadWaitingPickups()} className="rounded text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-primary">
+                            {t('invoice.retry')}
+                          </button>
+                        </div>
+                      )}
+                      {waitingPickups.length > 0 && (
+                        <div className="divide-y divide-outline-variant/10">
+                          {waitingPickups.map((appointment) => (
+                            <WaitingPickupCard key={appointment.appointmentId} appointment={appointment} />
+                          ))}
+                        </div>
+                      )}
+                      {appointmentStatus === 'done' && waitingPickups.length === 0 && (
+                        <p className="px-4 py-4 text-sm text-on-surface-variant">{t('customerOrders.noAppointments')}</p>
+                      )}
+                    </SectionCard>
+                  )}
+                  {activeSection === 'packages' && (
+                    <SectionCard icon="confirmation_number" title={t('customerOrders.sections.packages')}>
+                      <p className="px-4 py-4 text-sm text-on-surface-variant">{t('customerOrders.packagesUnavailable')}</p>
+                    </SectionCard>
+                  )}
                 </div>
               </>
             )}
           </div>
           {status === 'done' && !selectedOrderId && (
-            <PageActionFooter
-              icon="event"
-              label={t('customerOrders.schedulePickup')}
-              onClick={handleShowBookPickup}
+            <BottomNavBar
+              items={sectionItems}
+              activeKey={activeSection}
+              ariaLabel={t('customerOrders.sectionsLabel')}
+              onSelect={setActiveSection}
+              renderIcon={(item) => <CustomerSectionIcon name={item.key} />}
             />
           )}
         </>

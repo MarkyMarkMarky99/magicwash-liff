@@ -79,6 +79,26 @@
     "email": "อีเมล"
   },
   "customerOrders": {
+    "sectionsLabel": "เมนูลูกค้า",
+    "sections": {
+      "orders": "รายการซัก",
+      "packages": "แพ็กเกจ",
+      "invoices": "ใบแจ้งหนี้",
+      "appointments": "นัดหมาย"
+    },
+    "noInvoices": "ยังไม่มีใบแจ้งหนี้",
+    "invoicesLoadError": "โหลดใบแจ้งหนี้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+    "invoiceBalance": "ยอดค้างชำระ {{amount}}",
+    "invoicePaid": "ชำระแล้ว {{amount}}",
+    "invoiceOfTotal": "จาก {{total}}",
+    "invoicePending": "รอตรวจสอบ {{amount}}",
+    "invoiceRefreshError": "อัปเดตการชำระเงินไม่สำเร็จ กดรีเฟรชใบแจ้งหนี้เพื่อลองอีกครั้ง",
+    "refreshInvoices": "รีเฟรชใบแจ้งหนี้",
+    "noAppointments": "ไม่มีนัดรับผ้าที่กำลังจะมาถึง",
+    "appointmentsLoadError": "โหลดนัดรับผ้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+    "packagesUnavailable": "ยังไม่เปิดให้บริการแพ็กเกจ",
+    "customerLoadError": "โหลดข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+    "missingCustomerId": "ไม่พบ Customer ID ใน URL",
     "customerNo": "หมายเลขลูกค้า",
     "type": "ประเภทลูกค้า",
     "schedulePickup": "นัดรับผ้า",

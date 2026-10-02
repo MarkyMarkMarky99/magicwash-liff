@@ -65,7 +65,7 @@ export function gvizUrl({ source, tq, filterField, filterValue, sortField, sortD
 const CACHE_VERSIONS = {
   ordersView: 3,
   invoiceView: 1,
-  invoiceViewByCustomer: 1,
+  invoiceViewByCustomer: 3,
 };
 
 function cacheResourceName(resource) {
