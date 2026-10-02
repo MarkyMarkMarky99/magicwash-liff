@@ -733,6 +733,24 @@ function protectText(value) {
 function protectNullableText(value) {
   return value === null ? null : protectText(value);
 }
+function formatBangkokTimestamp(date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  );
+  return `${value.year}-${value.month}-${value.day} ${value.hour}:${value.minute}:${value.second}`;
+}
 function toPaymentWireRow(row) {
   // `amount` is omitted entirely when unknown rather than sent as JSON null.
   // The live sheet schema declares `amount` as `"type": "number"` and only
@@ -745,7 +763,10 @@ function toPaymentWireRow(row) {
     ...(row.amount === null ? {} : { amount: row.amount }),
     method: row.method,
     status: row.status,
-    paid_at: protectNullableText(row.paid_at),
+    // USER_ENTERED parses unprotected Bangkok wall time as a Sheets datetime.
+    // Keep the validated internal row in ISO format; convert only at the wire.
+    paid_at:
+      row.paid_at === null ? null : formatBangkokTimestamp(new Date(row.paid_at)),
     reference: protectNullableText(row.reference),
     proof_url: protectNullableText(row.proof_url),
     slip_data: protectNullableText(row.slip_data),
